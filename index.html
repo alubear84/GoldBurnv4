@@ -372,17 +372,17 @@
 
             return (
                 <div className="max-w-md mx-auto mt-20 bg-stone-900 border border-amber-900/30 rounded-2xl p-6 shadow-2xl text-center">
-                    <h1 className="text-2xl font-black text-amber-500 uppercase tracking-widest mb-1">GoldBurn v1</h1>
-                    <p className="text-xs text-stone-400 mb-6">Peer-to-Peer Sandbox Mode</p>
+                    <h1 className="text-2xl font-black text-amber-500 uppercase tracking-widest mb-1">GoldBurn</h1>
+                    <p className="text-xs text-stone-400 mb-6">This is a Test so expect errors.</p>
                     
                     <div className="space-y-4 text-left">
                         <div>
                             <label className="text-[10px] font-bold text-stone-500 uppercase">Username</label>
-                            <input type="text" value={username} onChange={e=>setUsername(e.target.value)} className="w-full bg-stone-950 border border-stone-800 rounded px-3 py-2 text-stone-200 outline-none focus:border-amber-600" placeholder="Example: Bandit Captain" />
+                            <input type="text" value={username} onChange={e=>setUsername(e.target.value)} className="w-full bg-stone-950 border border-stone-800 rounded px-3 py-2 text-stone-200 outline-none focus:border-amber-600" placeholder="Example: aviyarn" />
                         </div>
                         <div>
                             <label className="text-[10px] font-bold text-stone-500 uppercase">Room Code (Leave blank to Create)</label>
-                            <input type="text" value={roomCode} onChange={e=>setRoomCode(e.target.value)} className="w-full bg-stone-950 border border-stone-800 rounded px-3 py-2 text-amber-500 uppercase outline-none focus:border-amber-600" placeholder="e.g. BATTLE99" />
+                            <input type="text" value={roomCode} onChange={e=>setRoomCode(e.target.value)} className="w-full bg-stone-950 border border-stone-800 rounded px-3 py-2 text-amber-500 uppercase outline-none focus:border-amber-600" placeholder="On top right of waiting room" />
                         </div>
                         <button onClick={() => onJoin(roomCode || Math.random().toString(36).substring(2,6).toUpperCase(), username || 'Duelist', !roomCode)} className="w-full bg-gradient-to-r from-amber-800 to-amber-950 text-amber-100 font-bold uppercase py-3 rounded-lg text-xs hover:brightness-110 border border-amber-700/50 transition">
                             {roomCode ? 'Join Match' : 'Create Match'}
@@ -1504,7 +1504,7 @@
                 <GameProvider>
                     <div className="flex flex-col min-h-screen">
                         <header className="bg-stone-900 border-b border-stone-800 p-3 flex justify-between items-center px-6">
-                            <h1 className="text-sm font-black tracking-widest text-amber-500 uppercase">GoldBurn v1</h1>
+                            <h1 className="text-sm font-black tracking-widest text-amber-500 uppercase">GoldBurn Test v1</h1>
                             {(tab === 'lobby' || tab === 'forge') && (
                                 <nav className="flex gap-2">
                                     <button onClick={()=>setTab('lobby')} className={`text-xs px-4 py-1.5 rounded font-bold uppercase tracking-wider transition ${tab==='lobby'?'bg-stone-800 text-stone-200':'text-stone-500 hover:text-stone-300'}`}>Play</button>
