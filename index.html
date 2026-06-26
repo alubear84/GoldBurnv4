@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GoldBurn</title>
+    <title>GoldBurn V3 Sandbox</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@babel/standalone@7.24.0/babel.min.js"></script>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
@@ -19,11 +19,11 @@
     <div id="root"></div>
 
     <script type="text/babel" data-type="module">
-        import React, { useState, useEffect, useMemo, createContext, useContext } from 'https://esm.sh/react@18.2.0';
+        import React, { useState, useEffect, useMemo, createContext, useContext, useRef } from 'https://esm.sh/react@18.2.0';
         import ReactDOM from 'https://esm.sh/react-dom@18.2.0/client';
 
         // ============================================================================
-        // BA Test CARD DATABASE
+        // V3 CARD DATABASE
         // ============================================================================
         const MASTER_CARDS = [
             { id: 'heart_soul', name: 'Heart and Soul', type: 'Vital', limit: 1, hp: 20, cost: 0, set: 'Core', image: 'Heart&Soul.png', description: 'Can make up to three actions per turn. Unaffected by move effects.' },
@@ -31,7 +31,7 @@
             { id: 'bandit', name: 'Bandit', type: 'Troop', limit: 3, hp: 3, cost: 3, set: 'Bandits Arrival', image: 'Bandit.png', description: 'Slash (0): Deal 3 dmg. Knife Toss (2): Deal 3 dmg.' },
             { id: 'death_toll', name: 'Death Toll', type: 'Act (Fast)', limit: 3, cost: 3, set: 'Bandits Arrival', image: 'DeathToll.png', description: 'This turn, whenever a troop your opponent controls is destroyed, you gain 2 gold.' },
             { id: 'bandit_checkpoint', name: 'Bandit Checkpoint', type: 'Zone', limit: 3, cost: 0, set: 'Bandits Arrival', image: 'BanditCheckpoint.png', description: 'Every time your opponent summons a troop, you gain 1 gold.' },
-            { id: 'engrave_engrave', name: 'Engrave Engrave', type: 'Act (Slow)', limit: 3, cost: 2, set: 'Bandits Arrival', image: 'engraveEngrave.png', description: 'Target a card in either graveyard; expel it.' },
+            { id: 'engrave_engrave', name: 'Engrave Engrave', type: 'Act (Slow)', limit: 3, cost: 2, set: 'Bandits Arrival', image: 'Engrave2.png', description: 'Target a card in either graveyard; expel it.' },
             { id: 'vacation_abyss', name: 'Vacation in the Abyss', type: 'Act (Fast)', limit: 3, cost: 3, set: 'Bandits Arrival', image: 'VayCayinAbyss.png', description: 'Target a non-vital troop on the field; It is expelled until the end of the turn.' },
             { id: 'locust_swarm', name: 'Locust Swarm', type: 'Act (Slow)', limit: 3, cost: 4, set: 'Bandits Arrival', image: 'LocustSwarm.png', description: 'All of your opponent’s troops gain 3 poison counters (remove 1 counter at the end of each turn, deal 1 dmg.)' },
             { id: 'meat_hook', name: 'Meat Hook', type: 'Troop', limit: 3, hp: 3, cost: 3, set: 'Bandits Arrival', image: 'MeatHook.png', description: 'Hook Shot (3)- Deal 2 dmg, target is moved up 1, and cannot move or be moved until the end of the next turn. "Rest assured, it is a moving experience."' },
@@ -203,7 +203,7 @@
                     {/* LEFT PANEL */}
                     <div className="xl:col-span-8 bg-stone-900 border border-amber-900/30 rounded-2xl p-5 shadow-2xl flex flex-col h-[750px]">
                         <div className="border-b border-stone-800 pb-4 mb-4">
-                            <h2 className="text-lg font-bold text-amber-500 uppercase tracking-wide mb-3">Deck Builder</h2>
+                            <h2 className="text-lg font-bold text-amber-500 uppercase tracking-wide mb-3">V3 Deck Builder</h2>
                             <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
                                 <input type="text" placeholder="Search by name..." value={search} onChange={(e)=>setSearch(e.target.value)} className="col-span-1 md:col-span-6 bg-stone-950 border border-stone-800 rounded px-3 py-1.5 text-stone-200 outline-none focus:border-amber-600 text-xs" />
                                 <select value={sortOrder} onChange={(e)=>setSortOrder(e.target.value)} className="col-span-1 md:col-span-2 bg-stone-950 border border-stone-800 rounded px-2 py-1.5 text-stone-300 outline-none text-xs">
@@ -364,7 +364,7 @@
         };
 
         // ============================================================================
-        // MULTIPLAYER LOBBY
+        // V3 MULTIPLAYER LOBBY
         // ============================================================================
         const Lobby = ({ onJoin }) => {
             const [username, setUsername] = useState('');
@@ -372,17 +372,17 @@
 
             return (
                 <div className="max-w-md mx-auto mt-20 bg-stone-900 border border-amber-900/30 rounded-2xl p-6 shadow-2xl text-center">
-                    <h1 className="text-2xl font-black text-amber-500 uppercase tracking-widest mb-1">GoldBurn Test</h1>
-                    <p className="text-xs text-stone-400 mb-6">This is a test so expect errors and stuff like that.</p>
+                    <h1 className="text-2xl font-black text-amber-500 uppercase tracking-widest mb-1">GoldBurn V3</h1>
+                    <p className="text-xs text-stone-400 mb-6">Peer-to-Peer Sandbox Mode</p>
                     
                     <div className="space-y-4 text-left">
                         <div>
                             <label className="text-[10px] font-bold text-stone-500 uppercase">Username</label>
-                            <input type="text" value={username} onChange={e=>setUsername(e.target.value)} className="w-full bg-stone-950 border border-stone-800 rounded px-3 py-2 text-stone-200 outline-none focus:border-amber-600" placeholder="Example: aviyarn" />
+                            <input type="text" value={username} onChange={e=>setUsername(e.target.value)} className="w-full bg-stone-950 border border-stone-800 rounded px-3 py-2 text-stone-200 outline-none focus:border-amber-600" placeholder="Example: Bandit Captain" />
                         </div>
                         <div>
-                            <label className="text-[10px] font-bold text-stone-500 uppercase">Room Code</label>
-                            <input type="text" value={roomCode} onChange={e=>setRoomCode(e.target.value)} className="w-full bg-stone-950 border border-stone-800 rounded px-3 py-2 text-amber-500 uppercase outline-none focus:border-amber-600" placeholder="Leave blank to Create" />
+                            <label className="text-[10px] font-bold text-stone-500 uppercase">Room Code (Leave blank to Create)</label>
+                            <input type="text" value={roomCode} onChange={e=>setRoomCode(e.target.value)} className="w-full bg-stone-950 border border-stone-800 rounded px-3 py-2 text-amber-500 uppercase outline-none focus:border-amber-600" placeholder="e.g. BATTLE99" />
                         </div>
                         <button onClick={() => onJoin(roomCode || Math.random().toString(36).substring(2,6).toUpperCase(), username || 'Duelist', !roomCode)} className="w-full bg-gradient-to-r from-amber-800 to-amber-950 text-amber-100 font-bold uppercase py-3 rounded-lg text-xs hover:brightness-110 border border-amber-700/50 transition">
                             {roomCode ? 'Join Match' : 'Create Match'}
@@ -393,7 +393,7 @@
         };
 
         // ============================================================================
-        // v1 SANDBOX BOARD
+        // V3 SANDBOX BOARD
         // ============================================================================
         const SandboxBoard = ({ roomCode, username, isHost, customDeck, onLeaveLobby, isSoloTest = false }) => {
             const [peer, setPeer] = useState(null);
@@ -437,6 +437,12 @@
             const [modalSelectedIdx, setModalSelectedIdx] = useState(null);
             const [movingCard, setMovingCard] = useState(null); // stores {r, c, type} of the field card being moved
 
+            const [popupMsg, setPopupMsg] = useState(null);
+            const popupTimer = useRef(null);
+
+            const [chatInput, setChatInput] = useState('');
+            const [chatLogs, setChatLogs] = useState([]);
+
             useEffect(() => {
                 let generatedDeck = [];
                 Object.entries(customDeck).forEach(([id, qty]) => {
@@ -462,16 +468,16 @@
                     setOppVitalLocked(true);
                     addLog("Offline Sandbox Mode initialized. Testing your deck layout.");
                 } else {
-                    addLog(`Game Engine v1 Initialized. ${isHost ? 'You go first (3 Gold).' : 'You go second (0 Gold).'}`);
+                    addLog(`Game Engine V3 Initialized. ${isHost ? 'You go first (3 Gold).' : 'You go second (0 Gold).'}`);
                 }
             }, []);
 
             useEffect(() => {
                 if (isSoloTest) return;
-                const p = new Peer(isHost ? `v1-${roomCode}` : null);
+                const p = new Peer(isHost ? `v3-${roomCode}` : null);
                 p.on('open', id => {
                     if (!isHost) {
-                        const c = p.connect(`v1-${roomCode}`);
+                        const c = p.connect(`v3-${roomCode}`);
                         setupConnection(c);
                     }
                 });
@@ -493,6 +499,12 @@
                 }
             }, [hand, deck, grave, voidZone, connected, setupPhase, isSoloTest, conn]);
 
+            const showPopup = (msg) => {
+                setPopupMsg(msg);
+                if (popupTimer.current) clearTimeout(popupTimer.current);
+                popupTimer.current = setTimeout(() => { setPopupMsg(null); }, 3500);
+            };
+
             const setupConnection = (c) => {
                 setConn(c);
                 c.on('open', () => {
@@ -502,6 +514,8 @@
                 });
                 c.on('data', data => {
                     if (data.type === 'LOG') setLogs(prev => [data.msg, ...prev]);
+                    if (data.type === 'CHAT') setChatLogs(prev => [...prev, { sender: data.sender, msg: data.msg, isMe: false }]);
+                    if (data.type === 'POPUP') showPopup(data.msg);
                     if (data.type === 'SYNC_GOLD') setOppGold(data.gold);
                     if (data.type === 'SYNC_GRID') setOppGrid(data.grid);
                     if (data.type === 'SYNC_ZONE') setSharedZone(data.zone);
@@ -519,8 +533,25 @@
                         newOppGrid[data.pos.r][data.pos.c] = data.card;
                         setOppGrid(newOppGrid);
                     }
+                    if (data.type === 'OPP_ZONE_AWAY') {
+                        const card = data.card;
+                        if (data.dest === 'grave') {
+                            setGrave(prev => [card, ...prev]);
+                            addLog(`Your ${card.name} was sent to the Graveyard by the opponent.`, false);
+                        } else if (data.dest === 'void') {
+                            setVoidZone(prev => [card, ...prev]);
+                            addLog(`Your ${card.name} was sent to the Void by the opponent.`, false);
+                        } else if (data.dest === 'deck') {
+                            setDeck(prev => [...prev, card].sort(() => Math.random() - 0.5));
+                            addLog(`Your ${card.name} was shuffled into your Deck by the opponent.`, false);
+                        }
+                    }
                     if (data.type === 'CONCEDE') {
-                        alert("🎉 You Win! Your opponent has conceded the match.");
+                        if (data.reason === 'VITAL_DEAD') {
+                            alert("🎉 You Win! The enemy's Vital fell to 0.");
+                        } else {
+                            alert("🎉 You Win! Your opponent has conceded the match.");
+                        }
                         onLeaveLobby(); 
                     }
                 });
@@ -530,6 +561,14 @@
                 const formatted = `[${new Date().toLocaleTimeString()}] ${msg}`;
                 setLogs(prev => [formatted, ...prev]);
                 if (broadcast && conn && !isSoloTest) conn.send({ type: 'LOG', msg: formatted });
+            };
+
+            const handleSendChat = () => {
+                const msg = chatInput.trim();
+                if (!msg) return;
+                setChatLogs(prev => [...prev, { sender: username, msg: msg, isMe: true }]);
+                if (conn && !isSoloTest) conn.send({ type: 'CHAT', msg: msg, sender: username });
+                setChatInput('');
             };
 
             const broadcastGrid = (newGrid) => { setMyGrid(newGrid); if(conn && !isSoloTest) conn.send({ type: 'SYNC_GRID', grid: newGrid }); };
@@ -569,14 +608,16 @@
             };
 
             const executeRoll = () => {
+                let finalMsg = '';
                 if (diceType === 'coin') {
-                    const res = Math.random() < 0.5 ? 'Heads' : 'Tails';
-                    addLog(`${username} flipped a coin: [ ${res} ]`, true);
+                    finalMsg = `${username} flipped a coin: [ ${Math.random() < 0.5 ? 'Heads' : 'Tails'} ]`;
                 } else {
                     const sides = parseInt(diceType);
-                    const res = Math.floor(Math.random() * sides) + 1;
-                    addLog(`${username} rolled a D${sides} and got: [ ${res} ]`, true);
+                    finalMsg = `${username} rolled a D${sides} and got: [ ${Math.floor(Math.random() * sides) + 1} ]`;
                 }
+                addLog(finalMsg, true);
+                showPopup(finalMsg);
+                if (conn && !isSoloTest) conn.send({ type: 'POPUP', msg: finalMsg });
             };
 
             const drawFromDeck = () => {
@@ -594,7 +635,7 @@
                 setDeck(d);
                 setHand([...hand, card]);
                 setViewModal({ isOpen: false });
-                addLog(`${username} searched their deck and drew a card.`, true);
+                addLog(`${username} searched their deck and drew [${card.name}].`, true);
             };
 
             const openViewer = (title, cards, type, selectable = false) => {
@@ -632,11 +673,13 @@
                 } else if (dest === 'grave') {
                     setGrave([card, ...grave]);
                     addLog(`${username} returned ${card.name} to the Graveyard.`, true);
+                } else if (dest === 'deck') {
+                    setDeck(prev => [...prev, card].sort(() => Math.random() - 0.5));
+                    addLog(`${username} shuffled ${card.name} into their Deck.`, true);
                 }
                 setModalSelectedIdx(null);
             };
 
-            // Global updater for cards you control on the field
             const updateMyCard = (instanceId, updater) => {
                 let updatedCard = null;
                 let newGrid = myGrid.map(row => row.map(c => {
@@ -668,6 +711,11 @@
                 if (!movingCard || movingCard.type !== 'grid') return;
                 const { r: oldR, c: oldC } = movingCard;
                 
+                if (myGrid[newR][newC] !== null) {
+                    addLog(`Space is already occupied!`, false);
+                    return;
+                }
+
                 let newGrid = [...myGrid];
                 const cardToMove = newGrid[oldR][oldC];
                 
@@ -683,6 +731,7 @@
             };
 
             const placeToGrid = (r, c) => {
+                if (myGrid[r][c] !== null) { addLog(`Cannot place a card on an occupied space!`, false); return; }
                 if (selectedHandIdx === null) return;
                 const card = hand[selectedHandIdx];
                 if (card.type.includes('Act') || card.type === 'Zone') return alert("Acts and Zones have specific slots in the middle!");
@@ -701,6 +750,7 @@
             };
 
             const placeToZone = () => {
+                if (sharedZone !== null) { addLog(`Zone slot is already occupied!`, false); return; }
                 if (selectedHandIdx === null) return;
                 const card = hand[selectedHandIdx];
                 if (card.type !== 'Zone') return;
@@ -708,11 +758,14 @@
                 newHand.splice(selectedHandIdx, 1);
                 setHand(newHand);
                 setSelectedHandIdx(null);
-                broadcastZone(card);
+
+                const zonedCard = { ...card, ownerHost: isHost };
+                broadcastZone(zonedCard);
                 addLog(`${username} established a new Zone: ${card.name}.`, true);
             };
 
             const placeToAct = () => {
+                if (actSlot !== null) { addLog(`Act slot is already occupied!`, false); return; }
                 if (selectedHandIdx === null) return;
                 const card = hand[selectedHandIdx];
                 if (!card.type.includes('Act')) return;
@@ -724,8 +777,20 @@
                 addLog(`${username} played ${card.type}: ${card.name}.`, true);
             };
 
-            const modifyHealth = (r, c, amt) => {
-                updateMyCard(myGrid[r][c].instanceId, card => ({ ...card, currentHp: card.currentHp + amt }));
+            const modifyHealth = (instanceId, amt) => {
+                let targetCard = null;
+                updateMyCard(instanceId, card => {
+                    targetCard = card;
+                    return { ...card, currentHp: card.currentHp + amt };
+                });
+
+                if (targetCard && targetCard.type === 'Vital' && targetCard.currentHp + amt <= 0) {
+                    setTimeout(() => {
+                        alert("Your Vital has fallen to 0. YOU LOST!");
+                        if(conn && !isSoloTest) conn.send({ type: 'CONCEDE', reason: 'VITAL_DEAD' });
+                        onLeaveLobby();
+                    }, 500);
+                }
             };
 
             const toggleActionUsed = (instanceId) => {
@@ -766,15 +831,24 @@
                     broadcastZone(null);
                 }
                 
-                // Strip markers and action status before entering pile
                 card = { ...card, markers: {}, actionUsed: false };
 
-                if (dest === 'grave') {
-                    setGrave([card, ...grave]);
-                    addLog(`${username} sent ${card.name} to the Graveyard.`, true);
-                } else if (dest === 'void') {
-                    setVoidZone([card, ...voidZone]);
-                    addLog(`${username} exiled ${card.name} to the Void.`, true);
+                const isOpponentOwned = type === 'zone' && card.ownerHost !== isHost;
+
+                if (isOpponentOwned) {
+                    if (conn && !isSoloTest) conn.send({ type: 'OPP_ZONE_AWAY', dest, card });
+                    addLog(`${username} sent ${card.name} to the opponent's ${dest}.`, true);
+                } else {
+                    if (dest === 'grave') {
+                        setGrave([card, ...grave]);
+                        addLog(`${username} sent ${card.name} to the Graveyard.`, true);
+                    } else if (dest === 'void') {
+                        setVoidZone([card, ...voidZone]);
+                        addLog(`${username} exiled ${card.name} to the Void.`, true);
+                    } else if (dest === 'deck') {
+                        setDeck(prev => [...prev, card].sort(() => Math.random() - 0.5));
+                        addLog(`${username} shuffled ${card.name} into their Deck.`, true);
+                    }
                 }
                 setActiveMenu(null);
             };
@@ -792,6 +866,9 @@
                 } else if (dest === 'void') {
                     setVoidZone([card, ...voidZone]);
                     addLog(`${username} exiled ${card.name} from hand to the Void.`, true);
+                } else if (dest === 'deck') {
+                    setDeck(prev => [...prev, card].sort(() => Math.random() - 0.5));
+                    addLog(`${username} shuffled ${card.name} from their hand into the Deck.`, true);
                 }
             };
 
@@ -803,21 +880,24 @@
 
             const renderCardLayout = (card, showMenuParams) => {
                 return (
-                    <div className="w-full h-full border-2 border-stone-800 rounded-lg bg-stone-850 shadow-md flex flex-col group overflow-hidden relative">
-                        {card.image && (
-                            <img src={card.image} alt={card.name} className={`absolute inset-0 w-full h-full object-cover transition ${card.actionUsed ? 'opacity-40 grayscale blur-[1px]' : 'opacity-80 group-hover:opacity-100'}`} />
-                        )}
-                        {!card.image && (
-                            <div className="absolute inset-0 p-2 flex flex-col items-center justify-center bg-stone-900">
-                                <span className="text-[9px] font-bold text-stone-200 text-center">{card.name}</span>
-                            </div>
-                        )}
+                    <div className="w-full h-full border-2 border-stone-800 rounded-lg bg-stone-850 shadow-md flex flex-col group relative">
+                        
+                        <div className="absolute inset-0 rounded-lg overflow-hidden">
+                            {card.image && (
+                                <img src={card.image} alt={card.name} className={`absolute inset-0 w-full h-full object-cover transition ${card.actionUsed ? 'opacity-40 grayscale blur-[1px]' : 'opacity-80 group-hover:opacity-100'}`} />
+                            )}
+                            {!card.image && (
+                                <div className="absolute inset-0 p-2 flex flex-col items-center justify-center bg-stone-900">
+                                    <span className="text-[9px] font-bold text-stone-200 text-center">{card.name}</span>
+                                </div>
+                            )}
 
-                        {card.actionUsed && (
-                            <div className="absolute inset-0 bg-black/50 z-10 flex items-center justify-center pointer-events-none">
-                                <span className="text-3xl opacity-80 drop-shadow-md">💤</span>
-                            </div>
-                        )}
+                            {card.actionUsed && (
+                                <div className="absolute inset-0 bg-black/50 z-10 flex items-center justify-center pointer-events-none">
+                                    <span className="text-3xl opacity-80 drop-shadow-md">💤</span>
+                                </div>
+                            )}
+                        </div>
 
                         <div className="absolute top-1 right-1 flex flex-col gap-1 z-20 pointer-events-none">
                             {card.markers && Object.entries(card.markers).filter(([k,v])=>v>0).map(([color, count]) => (
@@ -826,7 +906,7 @@
                         </div>
 
                         {card.hp !== undefined && (
-                            <div className="absolute top-1/2 -translate-y-1/2 left-1 bg-stone-200 text-stone-900 rounded-full w-6 h-6 flex items-center justify-center font-bold text-xs border-2 border-stone-900 shadow-lg z-20 shadow-black/50">
+                            <div className="absolute top-1/2 -translate-y-1/2 left-0 -translate-x-1/2 bg-stone-200 text-stone-900 rounded-full w-7 h-7 flex items-center justify-center font-bold text-xs border-2 border-stone-900 shadow-lg z-20 shadow-black/50">
                                 {card.currentHp}
                             </div>
                         )}
@@ -834,20 +914,21 @@
                         {activeMenu && showMenuParams && activeMenu.id === showMenuParams.id && (
                             <div className="absolute inset-0 bg-stone-950/95 z-30 flex flex-col justify-center items-center gap-1.5 p-2 rounded-lg">
                                 {card.hp !== undefined && (
-                                    <div className="flex gap-1 w-full">
-                                        <button onClick={(e)=>{e.stopPropagation(); modifyHealth(showMenuParams.r, showMenuParams.c, 1)}} className="bg-emerald-900 flex-1 text-emerald-100 text-[9px] py-1 rounded">+1 HP</button>
-                                        <button onClick={(e)=>{e.stopPropagation(); modifyHealth(showMenuParams.r, showMenuParams.c, -1)}} className="bg-rose-900 flex-1 text-rose-100 text-[9px] py-1 rounded">-1 HP</button>
+                                    <div className="flex gap-2 w-full justify-center mb-1">
+                                        <button onClick={(e)=>{e.stopPropagation(); modifyHealth(card.instanceId, 1)}} className="bg-emerald-900/80 hover:bg-emerald-800 text-emerald-100 text-[9px] px-3 py-1 rounded transition">+1 HP</button>
+                                        <button onClick={(e)=>{e.stopPropagation(); modifyHealth(card.instanceId, -1)}} className="bg-rose-900/80 hover:bg-rose-800 text-rose-100 text-[9px] px-3 py-1 rounded transition">-1 HP</button>
                                     </div>
                                 )}
                                 <div className="flex gap-1 w-full">
-                                    <button onClick={(e)=>{e.stopPropagation(); toggleActionUsed(card.instanceId)}} className="bg-stone-700 text-stone-200 text-[9px] w-full py-1 rounded">Action</button>
+                                    <button onClick={(e)=>{e.stopPropagation(); toggleActionUsed(card.instanceId)}} className="bg-stone-700 hover:bg-stone-600 transition text-stone-200 text-[9px] w-full py-1 rounded">Action</button>
                                     {showMenuParams.type === 'grid' && (
-                                        <button onClick={(e)=>{e.stopPropagation(); setMovingCard(showMenuParams); setActiveMenu(null);}} className="bg-amber-800 text-amber-100 text-[9px] w-full py-1 rounded">Move</button>
+                                        <button onClick={(e)=>{e.stopPropagation(); setMovingCard(showMenuParams); setActiveMenu(null);}} className="bg-amber-800 hover:bg-amber-700 transition text-amber-100 text-[9px] w-full py-1 rounded">Move</button>
                                     )}
                                 </div>
-                                <button onClick={(e)=>{e.stopPropagation(); sendFieldCardAway(showMenuParams.type, 'grave', showMenuParams.r, showMenuParams.c)}} className="bg-stone-800 text-stone-200 text-[10px] w-full py-1 rounded">To Graveyard</button>
-                                <button onClick={(e)=>{e.stopPropagation(); sendFieldCardAway(showMenuParams.type, 'void', showMenuParams.r, showMenuParams.c)}} className="bg-indigo-900 text-indigo-200 text-[10px] w-full py-1 rounded">To Void</button>
-                                <button onClick={(e)=>{e.stopPropagation(); setActiveMenu(null)}} className="text-[9px] text-stone-500 underline mt-1">Cancel</button>
+                                <button onClick={(e)=>{e.stopPropagation(); sendFieldCardAway(showMenuParams.type, 'grave', showMenuParams.r, showMenuParams.c)}} className="bg-stone-800 hover:bg-stone-700 transition text-stone-200 text-[10px] w-full py-1 rounded">To Graveyard</button>
+                                <button onClick={(e)=>{e.stopPropagation(); sendFieldCardAway(showMenuParams.type, 'void', showMenuParams.r, showMenuParams.c)}} className="bg-indigo-900 hover:bg-indigo-800 transition text-indigo-200 text-[10px] w-full py-1 rounded">To Void</button>
+                                <button onClick={(e)=>{e.stopPropagation(); sendFieldCardAway(showMenuParams.type, 'deck', showMenuParams.r, showMenuParams.c)}} className="bg-emerald-900 hover:bg-emerald-800 transition text-emerald-200 text-[10px] w-full py-1 rounded">To Deck</button>
+                                <button onClick={(e)=>{e.stopPropagation(); setActiveMenu(null)}} className="text-[9px] text-stone-500 hover:text-stone-300 transition underline mt-1">Cancel</button>
                             </div>
                         )}
                     </div>
@@ -865,9 +946,9 @@
                             } else {
                                 if(!showMenuParams || showMenuParams.type==='grid') setInspectedCard(null); 
                                 if(onClick) onClick(e); 
-                                setIsInspectorOpen(true); 
                             }
                         }} 
+                        onMouseEnter={() => { if(!isMoveTarget) setInspectedCard(null); }}
                         className={`w-full h-full border-2 border-dashed rounded-lg flex items-center justify-center transition-all hover:scale-105 ${isMoveTarget ? 'border-emerald-500 bg-emerald-900/30 cursor-pointer animate-pulse' : 'border-stone-800 bg-stone-900/40 hover:bg-stone-800 cursor-pointer'}`}
                     >
                         <span className="text-[10px] font-mono text-stone-600 uppercase text-center px-2">
@@ -882,8 +963,8 @@
                             setInspectedCard(card);
                             if (onClick) onClick(e);
                             if (showMenuParams) setActiveMenu(activeMenu ? null : showMenuParams);
-                            setIsInspectorOpen(true);
                         }} 
+                        onMouseEnter={() => { if(card) setInspectedCard(card); }}
                         className="w-full h-full cursor-pointer transition-all hover:scale-105 relative"
                     >
                         {renderCardLayout(card, showMenuParams)}
@@ -930,7 +1011,7 @@
                                                 <div 
                                                     key={`setup-${r}-${c}`} 
                                                     onClick={() => !myVitalLocked && connected && setMyVitalPos({r, c})}
-                                                    className={`w-[100px] h-[140px] border-2 rounded-lg transition-all flex flex-col items-center justify-center relative overflow-hidden
+                                                    className={`w-[80px] h-[112px] border-2 rounded-lg transition-all flex flex-col items-center justify-center relative overflow-hidden
                                                         ${!connected ? 'border-stone-900 bg-stone-950 cursor-not-allowed' : 
                                                           isSelected ? 'border-amber-500 bg-amber-950/50 shadow-[0_0_15px_rgba(245,158,11,0.2)]' : 
                                                           'border-stone-800 border-dashed bg-stone-950 hover:border-stone-600 hover:scale-105 cursor-pointer'}`}
@@ -941,7 +1022,7 @@
                                                             <div className="absolute inset-0 ring-4 ring-amber-500 ring-inset rounded-lg pointer-events-none z-20"></div>
                                                         </>
                                                     ) : (
-                                                        <span className="text-[10px] font-mono text-stone-700 text-center px-2 uppercase">Empty Space<br/>[{r},{c}]</span>
+                                                        <span className="text-[10px] font-mono text-stone-700 text-center px-2 uppercase">Space<br/>[{r},{c}]</span>
                                                     )}
                                                 </div>
                                             )
@@ -968,8 +1049,14 @@
             // PHASE 2: MAIN BOARD SCREEN
             // ============================================================================
             return (
-                <div className="h-screen flex p-4 gap-4 max-w-[1700px] mx-auto overflow-hidden">
+                <div className="h-screen flex p-4 gap-4 max-w-[1700px] mx-auto overflow-hidden relative">
                     
+                    {popupMsg && (
+                        <div className="fixed top-[40%] left-1/2 -translate-x-1/2 z-[100] bg-stone-950/95 border border-amber-500/50 text-amber-400 font-bold px-8 py-6 rounded-2xl shadow-[0_0_40px_rgba(245,158,11,0.3)] text-xl text-center pointer-events-none animate-pulse max-w-sm backdrop-blur-sm">
+                            {popupMsg}
+                        </div>
+                    )}
+
                     {/* LEFT PANEL: Logs & Trackers */}
                     <div className="w-56 lg:w-64 flex flex-col gap-4 shrink-0 overflow-y-auto">
                         
@@ -1026,17 +1113,38 @@
                             )}
                         </div>
 
-                        <div className="flex-1 bg-stone-900 border border-stone-800 rounded-xl p-3 flex flex-col min-h-[150px]">
-                            <span className="text-[10px] font-bold text-stone-500 uppercase tracking-widest border-b border-stone-800 pb-1 mb-2">Actions Log</span>
-                            <div className="flex-1 overflow-y-auto space-y-1 font-mono text-[9px] text-stone-400 pr-1">
-                                {logs.map((l, i) => <div key={i} className="border-b border-stone-950 pb-0.5">{l}</div>)}
+                        {/* Split Action & Chat Log */}
+                        <div className="flex flex-col flex-1 gap-4 min-h-0">
+                            <div className="flex-1 bg-stone-900 border border-stone-800 rounded-xl p-3 flex flex-col min-h-[120px]">
+                                <span className="text-[10px] font-bold text-stone-500 uppercase tracking-widest border-b border-stone-800 pb-1 mb-2">Actions Log</span>
+                                <div className="flex-1 overflow-y-auto space-y-1 font-mono text-[9px] text-stone-400 pr-1">
+                                    {logs.map((l, i) => <div key={i} className="border-b border-stone-950 pb-0.5">{l}</div>)}
+                                </div>
                             </div>
+                            
+                            {!isSoloTest && (
+                                <div className="flex-1 bg-stone-900 border border-stone-800 rounded-xl p-3 flex flex-col min-h-[150px]">
+                                    <span className="text-[10px] font-bold text-stone-500 uppercase tracking-widest border-b border-stone-800 pb-1 mb-2">Match Chat</span>
+                                    <div className="flex-1 overflow-y-auto space-y-1.5 font-mono text-[10px] pr-1 mb-2">
+                                        {chatLogs.map((c, i) => (
+                                            <div key={i} className="leading-tight">
+                                                <span className={c.isMe ? "text-emerald-400 font-bold" : "text-rose-500 font-bold"}>{c.sender}: </span>
+                                                <span className="text-white">{c.msg}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <form onSubmit={e => { e.preventDefault(); handleSendChat(); }} className="flex gap-1 mt-auto">
+                                        <input type="text" value={chatInput} onChange={e=>setChatInput(e.target.value)} className="flex-1 bg-stone-950 border border-stone-800 rounded px-2 py-1 text-[10px] text-white outline-none focus:border-emerald-600 transition" placeholder="Message..." />
+                                        <button type="submit" className="bg-stone-800 text-stone-300 px-3 rounded text-[10px] font-bold hover:bg-stone-700 transition">Send</button>
+                                    </form>
+                                </div>
+                            )}
                         </div>
                     </div>
 
                     {/* CENTER PANEL: The Battlefield */}
                     <div className="flex-1 flex flex-col gap-4 overflow-y-auto min-w-0">
-                        <div className="flex-1 bg-stone-900 border border-stone-800 rounded-xl p-6 flex flex-col justify-center relative shadow-inner overflow-x-auto min-h-[500px]">
+                        <div className="flex-1 bg-stone-900 border border-stone-800 rounded-xl p-4 flex flex-col justify-center relative shadow-inner overflow-x-auto min-h-[500px]">
                             
                             {!isSoloTest && (
                                 <div className="w-full max-w-xl mx-auto mb-auto">
@@ -1045,7 +1153,7 @@
                                         {[1, 0].map(r => (
                                             <div key={`opp-row-${r}`} className="flex justify-center gap-2">
                                                 {[0,1,2].map(c => (
-                                                    <div key={`opp-${r}-${c}`} className="w-[100px] h-[140px] opacity-70 cursor-pointer">
+                                                    <div key={`opp-${r}-${c}`} className="w-[80px] h-[112px] opacity-70 cursor-pointer">
                                                         {renderCard(oppGrid[r][c], () => { setInspectedCard(oppGrid[r][c]); setIsInspectorOpen(true); })}
                                                     </div>
                                                 ))}
@@ -1057,23 +1165,23 @@
 
                             <div className={`w-full max-w-3xl mx-auto flex items-center justify-between border-y border-stone-800/60 py-3 my-4 bg-stone-950/30 rounded-xl px-4 min-w-[500px] ${isSoloTest ? 'mt-auto' : ''}`}>
                                 {!isSoloTest ? (
-                                    <div onClick={() => { if(oppActSlot) { setInspectedCard(oppActSlot); setIsInspectorOpen(true); } }} className="w-[100px] h-[140px] border-2 border-stone-800 border-dashed rounded-lg bg-stone-900/40 flex-shrink-0 flex items-center justify-center relative opacity-70 cursor-pointer">
+                                    <div onClick={() => { if(oppActSlot) { setInspectedCard(oppActSlot); setIsInspectorOpen(true); } }} className="w-[80px] h-[112px] border-2 border-stone-800 border-dashed rounded-lg bg-stone-900/40 flex-shrink-0 flex items-center justify-center relative opacity-70 cursor-pointer">
                                         <span className="absolute -top-3 text-[8px] text-rose-500 uppercase font-mono">Enemy Act</span>
                                         {oppActSlot ? renderCardLayout(oppActSlot) : <span className="text-[8px] text-stone-700 font-mono uppercase">Empty</span>}
                                     </div>
                                 ) : (
-                                    <div className="w-[100px] h-[140px] opacity-0 pointer-events-none"></div>
+                                    <div className="w-[80px] h-[112px] opacity-0 pointer-events-none"></div>
                                 )}
                                 
                                 <div className="flex flex-col items-center">
                                     <span className="text-[10px] font-mono text-amber-500 uppercase tracking-widest mb-1">Zone in Play</span>
-                                    <div className="w-[100px] h-[140px] flex-shrink-0 relative">
+                                    <div className="w-[80px] h-[112px] flex-shrink-0 relative">
                                         {renderCard(sharedZone, placeToZone, { type: 'zone', id: 'shared-zone' })}
                                     </div>
                                     <span className="text-[8px] text-stone-600 mt-1 italic">Affects both fields</span>
                                 </div>
 
-                                <div className="w-[100px] h-[140px] flex-shrink-0 relative">
+                                <div className="w-[80px] h-[112px] flex-shrink-0 relative">
                                     <span className="absolute -top-3 text-[8px] text-amber-500 uppercase font-mono">Your Act Slot</span>
                                     {renderCard(actSlot, placeToAct, { type: 'act', id: 'my-act' })}
                                 </div>
@@ -1085,7 +1193,7 @@
                                     {[0, 1].map(r => (
                                         <div key={`my-row-${r}`} className="flex justify-center gap-2">
                                             {[0,1,2].map(c => (
-                                                <div key={`my-${r}-${c}`} className="w-[100px] h-[140px]">
+                                                <div key={`my-${r}-${c}`} className="w-[80px] h-[112px]">
                                                     {renderCard(myGrid[r][c], () => placeToGrid(r, c), { type: 'grid', r, c, id: `my-${r}-${c}` })}
                                                 </div>
                                             ))}
@@ -1097,7 +1205,7 @@
                         </div>
 
                         {/* Hand & Piles */}
-                        <div className="bg-stone-900 border border-stone-800 rounded-xl p-4 flex gap-4 min-h-[180px]">
+                        <div className="bg-stone-900 border border-stone-800 rounded-xl p-4 flex gap-4 min-h-[160px]">
                             <div className="flex flex-col gap-2 w-28 border-r border-stone-800 pr-4 shrink-0">
                                 <button onClick={drawFromDeck} className="flex-1 bg-stone-950 border border-stone-800 hover:border-amber-600 rounded text-xs font-bold text-stone-300 transition flex flex-col items-center justify-center">
                                     <span>Draw</span>
@@ -1122,7 +1230,8 @@
                                     {hand.map((card, idx) => (
                                         <div key={card.instanceId} 
                                              onClick={() => { setSelectedHandIdx(selectedHandIdx === idx ? null : idx); setInspectedCard(card); setIsInspectorOpen(true); }} 
-                                             className={`w-[100px] h-[140px] flex-shrink-0 transition-transform cursor-pointer relative hover:scale-105 ${selectedHandIdx === idx ? '-translate-y-2 ring-2 ring-amber-500 rounded-lg' : ''}`}>
+                                             onMouseEnter={() => setInspectedCard(card)}
+                                             className={`w-[80px] h-[112px] flex-shrink-0 transition-transform cursor-pointer relative hover:scale-105 ${selectedHandIdx === idx ? '-translate-y-2 ring-2 ring-amber-500 rounded-lg' : ''}`}>
                                             <div className="w-full h-full border-2 border-stone-800 rounded-lg bg-stone-850 flex flex-col justify-between overflow-hidden relative">
                                                 {card.image && (
                                                     <img src={card.image} alt={card.name} className="absolute inset-0 w-full h-full object-cover opacity-80" />
@@ -1138,6 +1247,7 @@
                                                     <div className="absolute inset-0 bg-stone-950/90 z-20 flex flex-col items-center justify-center gap-1 p-2">
                                                         <button onClick={(e)=>{e.stopPropagation(); sendHandCardAway(idx, 'grave');}} className="bg-stone-800 hover:bg-stone-700 text-stone-200 text-[9px] w-full py-1 rounded border border-stone-700 transition">To Grave</button>
                                                         <button onClick={(e)=>{e.stopPropagation(); sendHandCardAway(idx, 'void');}} className="bg-indigo-900 hover:bg-indigo-800 text-indigo-200 text-[9px] w-full py-1 rounded border border-indigo-800 transition">To Void</button>
+                                                        <button onClick={(e)=>{e.stopPropagation(); sendHandCardAway(idx, 'deck');}} className="bg-emerald-900 hover:bg-emerald-800 text-emerald-200 text-[9px] w-full py-1 rounded border border-emerald-800 transition">To Deck</button>
                                                     </div>
                                                 )}
                                             </div>
@@ -1153,7 +1263,7 @@
                         
                         <button 
                             onClick={() => setIsInspectorOpen(!isInspectorOpen)} 
-                            className="absolute -left-4 top-1/2 -translate-y-1/2 bg-amber-900 border border-amber-600 text-amber-400 rounded-full w-8 h-8 flex items-center justify-center hover:bg-amber-700 hover:text-amber-200 shadow-[0_0_15px_rgba(217,119,6,0.2)] z-50 transition-colors cursor-pointer"
+                            className="absolute -left-6 top-1/2 -translate-y-1/2 bg-stone-800 border border-stone-700 border-r-0 text-stone-300 rounded-l-xl w-6 h-16 flex items-center justify-center hover:bg-stone-700 hover:text-amber-400 z-50 transition-colors cursor-pointer shadow-[-4px_0_10px_rgba(0,0,0,0.5)]"
                         >
                             {isInspectorOpen ? '▶' : '◀'}
                         </button>
@@ -1181,7 +1291,17 @@
                                                 <span className="text-xs text-stone-500 mt-auto uppercase">{inspectedCard.type}</span>
                                             </div>
                                         )}
-                                        <div className="absolute top-2 right-2 bg-black/60 p-1 rounded opacity-0 group-hover:opacity-100 transition">
+                                        
+                                        {/* Status Markers Displayed in Inspector Overlay */}
+                                        {inspectedCard.markers && (
+                                            <div className="absolute top-2 right-2 flex flex-col gap-1 z-20 pointer-events-none">
+                                                {Object.entries(inspectedCard.markers).filter(([k,v])=>v>0).map(([color, count]) => (
+                                                    <div key={color} className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold border border-stone-950 shadow-md" style={{backgroundColor: color, color: color==='#eab308'?'black':'white'}}>{count}</div>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        <div className="absolute bottom-2 right-2 bg-black/60 p-1 rounded opacity-0 group-hover:opacity-100 transition">
                                             <svg className="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                                         </div>
                                     </div>
@@ -1204,17 +1324,17 @@
 
                             {/* Status Effect Markers UI Dropdown */}
                             {isMyCard && (
-                                <div className="bg-stone-950 border border-stone-800 rounded-xl p-4 shrink-0 transition-all overflow-hidden">
+                                <div className="bg-stone-950 border border-stone-800 rounded-xl shrink-0 transition-all overflow-hidden">
                                     <button 
                                         onClick={() => setShowMarkersUI(!showMarkersUI)} 
-                                        className="w-full flex justify-between items-center text-[10px] font-bold text-stone-500 uppercase tracking-widest outline-none"
+                                        className="w-full flex justify-between items-center p-4 text-[10px] font-bold text-stone-500 uppercase tracking-widest outline-none hover:bg-stone-900 transition-colors"
                                     >
                                         <span>Status Markers</span>
                                         <span className="text-stone-400">{showMarkersUI ? '▲' : '▼'}</span>
                                     </button>
                                     
                                     {showMarkersUI && (
-                                        <div className="flex justify-between px-1 mt-4">
+                                        <div className="flex justify-between px-3 pb-4">
                                             {MARKER_COLORS.map(c => {
                                                 const count = inspectedCard.markers?.[c.bg] || 0;
                                                 return (
@@ -1233,7 +1353,7 @@
                             )}
 
                             {/* Dice Roller Panel */}
-                            <div className="bg-stone-950 border border-stone-800 rounded-xl p-4 flex flex-col gap-3 shrink-0 mt-auto">
+                            <div className="bg-stone-950 border border-stone-800 rounded-xl p-4 flex flex-col gap-3 shrink-0">
                                 <span className="text-[10px] font-bold text-stone-500 uppercase tracking-widest block text-center">Dice Roller</span>
                                 <div className="flex gap-2">
                                     <select 
@@ -1253,7 +1373,7 @@
                             </div>
 
                             {/* Actions Refresh Panel */}
-                            <div className="bg-stone-950 border border-stone-800 rounded-xl p-4 flex flex-col items-center shrink-0">
+                            <div className="bg-stone-950 border border-stone-800 rounded-xl p-4 flex flex-col items-center shrink-0 mt-auto">
                                 <button onClick={clearAllActions} className="w-full bg-amber-900/30 hover:bg-amber-900/60 text-amber-500 border border-amber-900/50 rounded py-2 text-xs font-bold uppercase transition flex items-center justify-center gap-2">
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
                                     Refresh All Actions
@@ -1290,12 +1410,13 @@
                                                 {/* Action Overlay for Grave/Void Management */}
                                                 {modalSelectedIdx === i && (viewModal.type === 'myGrave' || viewModal.type === 'myVoid') && (
                                                     <div className="absolute inset-0 bg-stone-950/95 z-30 flex flex-col justify-center gap-2 p-2 rounded-lg border border-amber-500 shadow-xl">
-                                                        <button onClick={(e)=>{e.stopPropagation(); moveFromPile(viewModal.type, i, 'hand')}} className="bg-stone-800 hover:bg-stone-700 text-stone-200 text-[10px] w-full py-2 rounded font-bold uppercase transition">To Hand</button>
+                                                        <button onClick={(e)=>{e.stopPropagation(); moveFromPile(viewModal.type, i, 'hand')}} className="bg-stone-800 hover:bg-stone-700 text-stone-200 text-[10px] w-full py-1.5 rounded font-bold uppercase transition">To Hand</button>
+                                                        <button onClick={(e)=>{e.stopPropagation(); moveFromPile(viewModal.type, i, 'deck')}} className="bg-emerald-900 hover:bg-emerald-800 text-emerald-200 text-[10px] w-full py-1.5 rounded font-bold uppercase transition">To Deck</button>
                                                         {viewModal.type === 'myGrave' && (
-                                                            <button onClick={(e)=>{e.stopPropagation(); moveFromPile(viewModal.type, i, 'void')}} className="bg-indigo-900 hover:bg-indigo-800 text-indigo-200 text-[10px] w-full py-2 rounded font-bold uppercase transition">To Void</button>
+                                                            <button onClick={(e)=>{e.stopPropagation(); moveFromPile(viewModal.type, i, 'void')}} className="bg-indigo-900 hover:bg-indigo-800 text-indigo-200 text-[10px] w-full py-1.5 rounded font-bold uppercase transition">To Void</button>
                                                         )}
                                                         {viewModal.type === 'myVoid' && (
-                                                            <button onClick={(e)=>{e.stopPropagation(); moveFromPile(viewModal.type, i, 'grave')}} className="bg-stone-800 hover:bg-stone-700 text-stone-200 text-[10px] w-full py-2 rounded font-bold uppercase transition">To Graveyard</button>
+                                                            <button onClick={(e)=>{e.stopPropagation(); moveFromPile(viewModal.type, i, 'grave')}} className="bg-stone-800 hover:bg-stone-700 text-stone-200 text-[10px] w-full py-1.5 rounded font-bold uppercase transition">To Graveyard</button>
                                                         )}
                                                     </div>
                                                 )}
@@ -1353,7 +1474,7 @@
                 <GameProvider>
                     <div className="flex flex-col min-h-screen">
                         <header className="bg-stone-900 border-b border-stone-800 p-3 flex justify-between items-center px-6">
-                            <h1 className="text-sm font-black tracking-widest text-amber-500 uppercase">GoldBurn v1</h1>
+                            <h1 className="text-sm font-black tracking-widest text-amber-500 uppercase">GoldBurn V3</h1>
                             {(tab === 'lobby' || tab === 'forge') && (
                                 <nav className="flex gap-2">
                                     <button onClick={()=>setTab('lobby')} className={`text-xs px-4 py-1.5 rounded font-bold uppercase tracking-wider transition ${tab==='lobby'?'bg-stone-800 text-stone-200':'text-stone-500 hover:text-stone-300'}`}>Play</button>
