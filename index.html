@@ -66,6 +66,14 @@
             }
         };
 
+        const MARKER_COLORS = [
+            { bg: '#ef4444', name: 'Red' },
+            { bg: '#22c55e', name: 'Green' },
+            { bg: '#3b82f6', name: 'Blue' },
+            { bg: '#a855f7', name: 'Purple' },
+            { bg: '#eab308', name: 'Yellow' }
+        ];
+
         const GameContext = createContext();
 
         const GameProvider = ({ children }) => {
@@ -361,7 +369,7 @@
                     <div className="space-y-4 text-left">
                         <div>
                             <label className="text-[10px] font-bold text-stone-500 uppercase">Temp Username</label>
-                            <input type="text" value={username} onChange={e=>setUsername(e.target.value)} className="w-full bg-stone-950 border border-stone-800 rounded px-3 py-2 text-stone-200 outline-none focus:border-amber-600" placeholder="Player1" />
+                            <input type="text" value={username} onChange={e=>setUsername(e.target.value)} className="w-full bg-stone-950 border border-stone-800 rounded px-3 py-2 text-stone-200 outline-none focus:border-amber-600" placeholder="Example: Bandit Captain" />
                         </div>
                         <div>
                             <label className="text-[10px] font-bold text-stone-500 uppercase">Room Code (Leave blank to Create)</label>
@@ -411,8 +419,10 @@
             const [selectedHandIdx, setSelectedHandIdx] = useState(null);
             const [inspectedCard, setInspectedCard] = useState(null);
             const [isInspectorOpen, setIsInspectorOpen] = useState(true);
-            const [viewModal, setViewModal] = useState({ isOpen: false, title: '', cards: [], onSelect: null });
+            const [viewModal, setViewModal] = useState({ isOpen: false, title: '', cards: [], type: null, onSelect: null });
             const [activeMenu, setActiveMenu] = useState(null);
+            const [zoomedCard, setZoomedCard] = useState(null);
+            const [modalSelectedIdx, setModalSelectedIdx] = useState(null);
 
             useEffect(() => {
                 let generatedDeck = [];
@@ -533,6 +543,11 @@
                 addLog(`${username} ${amt > 0 ? 'gained' : 'spent'} ${Math.abs(amt)} Gold.`, true);
             };
 
+            const rollDice = (sides) => {
+                const res = Math.floor(Math.random() * sides) + 1;
+                addLog(`${username} rolled a D${sides} and got: [ ${res} ]`, true);
+            };
+
             const drawFromDeck = () => {
                 if (deck.length === 0) return;
                 const d = [...deck];
@@ -551,13 +566,71 @@
                 addLog(`${username} searched their deck and drew a card.`, true);
             };
 
-            const openViewer = (title, cards, selectable = false) => {
+            const openViewer = (title, cards, type, selectable = false) => {
+                setModalSelectedIdx(null);
                 setViewModal({
                     isOpen: true,
                     title: title,
                     cards: cards,
+                    type: type,
                     onSelect: selectable ? searchDeckDraw : null
                 });
+            };
+
+            const moveFromPile = (source, idx, dest) => {
+                let card;
+                let newSourcePile;
+                if (source === 'myGrave') {
+                    newSourcePile = [...grave];
+                    card = newSourcePile.splice(idx, 1)[0];
+                    setGrave(newSourcePile);
+                } else if (source === 'myVoid') {
+                    newSourcePile = [...voidZone];
+                    card = newSourcePile.splice(idx, 1)[0];
+                    setVoidZone(newSourcePile);
+                }
+
+                setViewModal(prev => ({...prev, cards: newSourcePile}));
+
+                if (dest === 'hand') {
+                    setHand([...hand, card]);
+                    addLog(`${username} recovered ${card.name} to their hand.`, true);
+                } else if (dest === 'void') {
+                    setVoidZone([card, ...voidZone]);
+                    addLog(`${username} expelled ${card.name} to the Void.`, true);
+                } else if (dest === 'grave') {
+                    setGrave([card, ...grave]);
+                    addLog(`${username} returned ${card.name} to the Graveyard.`, true);
+                }
+                setModalSelectedIdx(null);
+            };
+
+            // Global updater for cards you control on the field
+            const updateMyCard = (instanceId, updater) => {
+                let updatedCard = null;
+                let newGrid = myGrid.map(row => row.map(c => {
+                    if(c?.instanceId === instanceId) { updatedCard = updater(c); return updatedCard; }
+                    return c;
+                }));
+                if (updatedCard) {
+                    broadcastGrid(newGrid);
+                    if(inspectedCard?.instanceId === instanceId) setInspectedCard(updatedCard);
+                    return;
+                }
+
+                if (actSlot?.instanceId === instanceId) {
+                    updatedCard = updater(actSlot);
+                    broadcastAct(updatedCard);
+                    if(inspectedCard?.instanceId === instanceId) setInspectedCard(updatedCard);
+                    return;
+                }
+                
+                if (sharedZone?.instanceId === instanceId) {
+                    updatedCard = updater(sharedZone);
+                    broadcastZone(updatedCard);
+                    if(inspectedCard?.instanceId === instanceId) setInspectedCard(updatedCard);
+                    return;
+                }
             };
 
             const placeToGrid = (r, c) => {
@@ -603,10 +676,29 @@
             };
 
             const modifyHealth = (r, c, amt) => {
-                let newGrid = [...myGrid];
-                newGrid[r] = [...newGrid[r]];
-                newGrid[r][c] = { ...newGrid[r][c], currentHp: newGrid[r][c].currentHp + amt };
+                updateMyCard(myGrid[r][c].instanceId, card => ({ ...card, currentHp: card.currentHp + amt }));
+            };
+
+            const toggleActionUsed = (instanceId) => {
+                updateMyCard(instanceId, card => ({ ...card, actionUsed: !card.actionUsed }));
+            };
+
+            const clearAllActions = () => {
+                let newGrid = myGrid.map(row => row.map(c => c ? {...c, actionUsed: false} : c));
                 broadcastGrid(newGrid);
+                if (actSlot) broadcastAct({...actSlot, actionUsed: false});
+                addLog(`${username} refreshed all their action points.`, true);
+            };
+
+            const addMarker = (colorHex, delta) => {
+                if(!inspectedCard) return;
+                updateMyCard(inspectedCard.instanceId, card => {
+                    const currentCount = card.markers?.[colorHex] || 0;
+                    return {
+                        ...card, 
+                        markers: { ...(card.markers || {}), [colorHex]: Math.max(0, currentCount + delta) }
+                    };
+                });
             };
 
             const sendFieldCardAway = (type, dest, r=0, c=0) => {
@@ -625,6 +717,9 @@
                     broadcastZone(null);
                 }
                 
+                // Strip markers and action status before entering pile
+                card = { ...card, markers: {}, actionUsed: false };
+
                 if (dest === 'grave') {
                     setGrave([card, ...grave]);
                     addLog(`${username} sent ${card.name} to the Graveyard.`, true);
@@ -651,6 +746,62 @@
                 }
             };
 
+            const isMyCard = useMemo(() => {
+                if(!inspectedCard) return false;
+                const id = inspectedCard.instanceId;
+                return myGrid.flat().some(c=>c?.instanceId===id) || actSlot?.instanceId===id || sharedZone?.instanceId===id;
+            }, [inspectedCard, myGrid, actSlot, sharedZone]);
+
+            const renderCardLayout = (card, showMenuParams) => {
+                return (
+                    <div className="w-full h-full border-2 border-stone-800 rounded-lg bg-stone-850 shadow-md flex flex-col group overflow-hidden relative">
+                        {card.image && (
+                            <img src={card.image} alt={card.name} className={`absolute inset-0 w-full h-full object-cover transition ${card.actionUsed ? 'opacity-40 grayscale blur-[1px]' : 'opacity-80 group-hover:opacity-100'}`} />
+                        )}
+                        {!card.image && (
+                            <div className="absolute inset-0 p-2 flex flex-col items-center justify-center bg-stone-900">
+                                <span className="text-[9px] font-bold text-stone-200 text-center">{card.name}</span>
+                            </div>
+                        )}
+
+                        {/* Action Dimming Overlay */}
+                        {card.actionUsed && (
+                            <div className="absolute inset-0 bg-black/50 z-10 flex items-center justify-center">
+                                <span className="text-3xl opacity-80 drop-shadow-md">💤</span>
+                            </div>
+                        )}
+
+                        {/* Markers Container */}
+                        <div className="absolute top-1 right-1 flex flex-col gap-1 z-20">
+                            {card.markers && Object.entries(card.markers).filter(([k,v])=>v>0).map(([color, count]) => (
+                                <div key={color} className="w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold border border-stone-950 shadow-md" style={{backgroundColor: color, color: color==='#eab308'?'black':'white'}}>{count}</div>
+                            ))}
+                        </div>
+
+                        {card.hp !== undefined && (
+                            <div className="absolute top-1/2 -translate-y-1/2 left-0 -translate-x-1/2 bg-stone-200 text-stone-900 rounded-full w-6 h-6 flex items-center justify-center font-bold text-xs border-2 border-stone-900 shadow-lg z-20 shadow-black/50">
+                                {card.currentHp}
+                            </div>
+                        )}
+
+                        {activeMenu && showMenuParams && activeMenu.id === showMenuParams.id && (
+                            <div className="absolute inset-0 bg-stone-950/95 z-30 flex flex-col justify-center items-center gap-1.5 p-2 rounded-lg">
+                                {card.hp !== undefined && (
+                                    <div className="flex gap-2">
+                                        <button onClick={(e)=>{e.stopPropagation(); modifyHealth(showMenuParams.r, showMenuParams.c, 1)}} className="bg-emerald-900 text-emerald-100 text-[10px] px-2 py-1 rounded">+1 HP</button>
+                                        <button onClick={(e)=>{e.stopPropagation(); modifyHealth(showMenuParams.r, showMenuParams.c, -1)}} className="bg-rose-900 text-rose-100 text-[10px] px-2 py-1 rounded">-1 HP</button>
+                                    </div>
+                                )}
+                                <button onClick={(e)=>{e.stopPropagation(); toggleActionUsed(card.instanceId)}} className="bg-stone-700 text-stone-200 text-[9px] w-full py-1 rounded">Toggle Action</button>
+                                <button onClick={(e)=>{e.stopPropagation(); sendFieldCardAway(showMenuParams.type, 'grave', showMenuParams.r, showMenuParams.c)}} className="bg-stone-800 text-stone-200 text-[10px] w-full py-1 rounded">To Graveyard</button>
+                                <button onClick={(e)=>{e.stopPropagation(); sendFieldCardAway(showMenuParams.type, 'void', showMenuParams.r, showMenuParams.c)}} className="bg-indigo-900 text-indigo-200 text-[10px] w-full py-1 rounded">To Void</button>
+                                <button onClick={(e)=>{e.stopPropagation(); setActiveMenu(null)}} className="text-[9px] text-stone-500 underline mt-1">Cancel</button>
+                            </div>
+                        )}
+                    </div>
+                );
+            }
+
             const renderCard = (card, onClick, showMenuParams) => {
                 if (!card) return (
                     <div onClick={(e) => { if(!showMenuParams || showMenuParams.type==='grid') setInspectedCard(null); if(onClick) onClick(e); setIsInspectorOpen(true); }} className="w-full h-full border-2 border-stone-800 border-dashed rounded-lg flex items-center justify-center bg-stone-900/40 hover:bg-stone-800 cursor-pointer transition-all hover:scale-105">
@@ -666,39 +817,9 @@
                             if (showMenuParams) setActiveMenu(activeMenu ? null : showMenuParams);
                             setIsInspectorOpen(true);
                         }} 
-                        className="relative w-full h-full border-2 border-stone-800 rounded-lg bg-stone-850 shadow-md hover:border-amber-600 cursor-pointer flex flex-col group transition-all hover:scale-105"
+                        className="w-full h-full cursor-pointer transition-all hover:scale-105 relative"
                     >
-                        {/* Inner wrapper for image rounding */}
-                        <div className="absolute inset-0 rounded-lg overflow-hidden">
-                            {card.image && (
-                                <img src={card.image} alt={card.name} className="absolute inset-0 w-full h-full object-cover opacity-80 group-hover:opacity-100 transition" />
-                            )}
-                            {!card.image && (
-                                <div className="absolute inset-0 p-2 flex flex-col items-center justify-center bg-stone-900">
-                                    <span className="text-[9px] font-bold text-stone-200 text-center">{card.name}</span>
-                                </div>
-                            )}
-                        </div>
-
-                        {card.hp !== undefined && (
-                            <div className="absolute top-1/2 -translate-y-1/2 left-1 bg-stone-200 text-stone-900 rounded-full w-8 h-8 flex items-center justify-center font-bold text-xs border-2 border-stone-900 shadow-lg z-20">
-                                {card.currentHp}
-                            </div>
-                        )}
-
-                        {activeMenu && activeMenu.id === showMenuParams?.id && (
-                            <div className="absolute inset-0 bg-stone-950/95 z-30 flex flex-col justify-center items-center gap-1.5 p-2 rounded-lg">
-                                {card.hp !== undefined && (
-                                    <div className="flex gap-2">
-                                        <button onClick={(e)=>{e.stopPropagation(); modifyHealth(showMenuParams.r, showMenuParams.c, 1)}} className="bg-emerald-900 text-emerald-100 text-[10px] px-2 py-1 rounded">+1 HP</button>
-                                        <button onClick={(e)=>{e.stopPropagation(); modifyHealth(showMenuParams.r, showMenuParams.c, -1)}} className="bg-rose-900 text-rose-100 text-[10px] px-2 py-1 rounded">-1 HP</button>
-                                    </div>
-                                )}
-                                <button onClick={(e)=>{e.stopPropagation(); sendFieldCardAway(showMenuParams.type, 'grave', showMenuParams.r, showMenuParams.c)}} className="bg-stone-800 text-stone-200 text-[10px] w-full py-1 rounded">To Graveyard</button>
-                                <button onClick={(e)=>{e.stopPropagation(); sendFieldCardAway(showMenuParams.type, 'void', showMenuParams.r, showMenuParams.c)}} className="bg-indigo-900 text-indigo-200 text-[10px] w-full py-1 rounded">To Void</button>
-                                <button onClick={(e)=>{e.stopPropagation(); setActiveMenu(null)}} className="text-[9px] text-stone-500 underline mt-1">Cancel</button>
-                            </div>
-                        )}
+                        {renderCardLayout(card, showMenuParams)}
                     </div>
                 );
             };
@@ -780,12 +901,11 @@
             // PHASE 2: MAIN BOARD SCREEN
             // ============================================================================
             return (
-                <div className="h-screen flex p-4 gap-4 max-w-[1600px] mx-auto overflow-hidden">
+                <div className="h-screen flex p-4 gap-4 max-w-[1700px] mx-auto overflow-hidden">
                     
                     {/* LEFT PANEL: Logs & Trackers */}
                     <div className="w-56 lg:w-64 flex flex-col gap-4 shrink-0 overflow-y-auto">
                         
-                        {/* Tracker UI */}
                         <div className="bg-stone-900 border border-stone-800 rounded-xl p-4 shadow-md">
                             <div className="flex justify-between items-center mb-1">
                                 <h2 className="text-xs font-black text-amber-500 uppercase tracking-widest">Room: {roomCode}</h2>
@@ -821,10 +941,10 @@
                                     <div className="bg-stone-950 p-1.5 rounded border border-stone-800 flex justify-between">
                                         <span className="text-stone-500">Deck</span><span className="text-stone-300">{oppDeckCount}</span>
                                     </div>
-                                    <button onClick={()=>openViewer('Enemy Graveyard', oppGrave)} className="bg-stone-800 hover:bg-stone-700 p-1.5 rounded border border-stone-700 flex justify-between transition">
+                                    <button onClick={()=>openViewer('Enemy Graveyard', oppGrave, 'oppGrave')} className="bg-stone-800 hover:bg-stone-700 p-1.5 rounded border border-stone-700 flex justify-between transition">
                                         <span className="text-stone-400">Grave</span><span className="text-rose-400">{oppGrave.length}</span>
                                     </button>
-                                    <button onClick={()=>openViewer('Enemy Void', oppVoid)} className="bg-stone-800 hover:bg-stone-700 p-1.5 rounded border border-stone-700 flex justify-between transition">
+                                    <button onClick={()=>openViewer('Enemy Void', oppVoid, 'oppVoid')} className="bg-stone-800 hover:bg-stone-700 p-1.5 rounded border border-stone-700 flex justify-between transition">
                                         <span className="text-stone-400">Void</span><span className="text-indigo-400">{oppVoid.length}</span>
                                     </button>
                                 </div>
@@ -849,8 +969,8 @@
                                     {[1, 0].map(r => (
                                         <div key={`opp-row-${r}`} className="flex justify-center gap-2">
                                             {[0,1,2].map(c => (
-                                                <div key={`opp-${r}-${c}`} className="w-[100px] h-[140px] opacity-70 pointer-events-none">
-                                                    {renderCard(oppGrid[r][c])}
+                                                <div key={`opp-${r}-${c}`} className="w-[100px] h-[140px] opacity-70 cursor-pointer">
+                                                    {renderCard(oppGrid[r][c], () => { setInspectedCard(oppGrid[r][c]); setIsInspectorOpen(true); })}
                                                 </div>
                                             ))}
                                         </div>
@@ -859,9 +979,9 @@
                             </div>
 
                             <div className="w-full max-w-3xl mx-auto flex items-center justify-between border-y border-stone-800/60 py-3 my-2 bg-stone-950/30 rounded-xl px-4 min-w-[500px]">
-                                <div className="w-[100px] h-[140px] border-2 border-stone-800 border-dashed rounded-lg bg-stone-900/40 flex-shrink-0 flex items-center justify-center relative opacity-70 pointer-events-none">
+                                <div onClick={() => { if(oppActSlot) { setInspectedCard(oppActSlot); setIsInspectorOpen(true); } }} className="w-[100px] h-[140px] border-2 border-stone-800 border-dashed rounded-lg bg-stone-900/40 flex-shrink-0 flex items-center justify-center relative opacity-70 cursor-pointer">
                                     <span className="absolute -top-3 text-[8px] text-rose-500 uppercase font-mono">Enemy Act</span>
-                                    {oppActSlot ? <div className="text-[9px] text-center p-1 text-stone-300">{oppActSlot.name}</div> : <span className="text-[8px] text-stone-700 font-mono uppercase">Empty</span>}
+                                    {oppActSlot ? renderCardLayout(oppActSlot) : <span className="text-[8px] text-stone-700 font-mono uppercase">Empty</span>}
                                 </div>
                                 
                                 <div className="flex flex-col items-center">
@@ -902,13 +1022,13 @@
                                     <span>Draw</span>
                                     <span className="text-[9px] text-stone-500 font-mono">({deck.length})</span>
                                 </button>
-                                <button onClick={()=>openViewer('Your Deck (Randomized View)', deck, true)} className="bg-stone-800 text-[9px] text-stone-400 py-1 rounded hover:text-stone-200 transition">Search Deck</button>
+                                <button onClick={()=>openViewer('Your Deck (Randomized View)', deck, 'deck', true)} className="bg-stone-800 text-[9px] text-stone-400 py-1 rounded hover:text-stone-200 transition">Search Deck</button>
                                 <div className="flex gap-1">
-                                    <button onClick={()=>openViewer('Your Graveyard', grave)} className="flex-1 bg-stone-950 border border-stone-800 hover:border-stone-600 rounded flex flex-col items-center justify-center py-1 transition">
+                                    <button onClick={()=>openViewer('Your Graveyard', grave, 'myGrave')} className="flex-1 bg-stone-950 border border-stone-800 hover:border-stone-600 rounded flex flex-col items-center justify-center py-1 transition">
                                         <span className="text-[9px] font-bold text-stone-500">Grave</span>
                                         <span className="text-[8px] text-stone-600 font-mono">({grave.length})</span>
                                     </button>
-                                    <button onClick={()=>openViewer('Your Void', voidZone)} className="flex-1 bg-stone-950 border border-stone-800 hover:border-stone-600 rounded flex flex-col items-center justify-center py-1 transition">
+                                    <button onClick={()=>openViewer('Your Void', voidZone, 'myVoid')} className="flex-1 bg-stone-950 border border-stone-800 hover:border-stone-600 rounded flex flex-col items-center justify-center py-1 transition">
                                         <span className="text-[9px] font-bold text-indigo-500/70">Void</span>
                                         <span className="text-[8px] text-stone-600 font-mono">({voidZone.length})</span>
                                     </button>
@@ -947,10 +1067,9 @@
                         </div>
                     </div>
 
-                    {/* RIGHT PANEL: Collapsible Card Inspector */}
-                    <div className={`relative transition-all duration-300 ease-in-out flex flex-col bg-stone-900 border border-stone-800 rounded-xl shadow-md shrink-0 h-full ${isInspectorOpen ? 'w-[320px]' : 'w-8'}`}>
+                    {/* RIGHT PANEL: Collapsible Tools (Inspector, Markers, Dice) */}
+                    <div className={`relative transition-all duration-300 ease-in-out flex flex-col bg-stone-900 border border-stone-800 rounded-xl shadow-md shrink-0 h-full overflow-y-auto overflow-x-hidden ${isInspectorOpen ? 'w-[320px] p-4' : 'w-8 py-4'}`}>
                         
-                        {/* Toggle Button */}
                         <button 
                             onClick={() => setIsInspectorOpen(!isInspectorOpen)} 
                             className="absolute -left-4 top-1/2 -translate-y-1/2 bg-amber-900 border border-amber-600 text-amber-400 rounded-full w-8 h-8 flex items-center justify-center hover:bg-amber-700 hover:text-amber-200 shadow-[0_0_15px_rgba(217,119,6,0.2)] z-50 transition-colors cursor-pointer"
@@ -958,56 +1077,145 @@
                             {isInspectorOpen ? '▶' : '◀'}
                         </button>
 
-                        {/* Inspector Content */}
-                        <div className={`p-4 w-full h-full flex flex-col items-center justify-center overflow-hidden transition-opacity duration-300 ${isInspectorOpen ? 'opacity-100 delay-150' : 'opacity-0'}`}>
-                            {isInspectorOpen && (
-                                <>
-                                    <span className="text-xs font-bold text-stone-500 uppercase tracking-widest border-b border-stone-800 w-full text-center pb-2 mb-4 shrink-0">Card Inspector</span>
-                                    {inspectedCard ? (
-                                        <div className="w-[280px] h-[392px] relative rounded-2xl overflow-hidden shadow-2xl border-2 border-amber-600 shrink-0 bg-stone-850">
-                                            {inspectedCard.image ? (
-                                                <img src={inspectedCard.image} alt={inspectedCard.name} className="absolute inset-0 w-full h-full object-cover" />
-                                            ) : (
-                                                <div className="absolute inset-0 bg-stone-800 flex flex-col p-6 text-center items-center justify-center">
-                                                    <span className="text-2xl font-bold text-stone-200 mb-2">{inspectedCard.name}</span>
-                                                    <span className="text-base font-mono text-amber-500 mb-6">{inspectedCard.cost}G</span>
-                                                    <p className="text-sm text-stone-400 italic">{inspectedCard.description}</p>
-                                                    <span className="text-xs text-stone-500 mt-auto uppercase">{inspectedCard.type}</span>
-                                                </div>
-                                            )}
-                                        </div>
-                                    ) : (
-                                        <div className="w-[280px] h-[392px] border-2 border-dashed border-stone-700 rounded-2xl flex flex-col items-center justify-center p-4 bg-stone-900/50 shrink-0">
-                                            <svg className="w-10 h-10 text-stone-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
-                                            <span className="text-sm font-mono text-stone-600 uppercase text-center">Select a card<br/>to view details</span>
-                                        </div>
+                        <div className={`w-full flex flex-col gap-6 transition-opacity duration-300 ${isInspectorOpen ? 'opacity-100 delay-150' : 'opacity-0 hidden'}`}>
+                            
+                            {/* Card Inspector Tool */}
+                            <div className="flex flex-col items-center">
+                                <span className="text-xs font-bold text-stone-500 uppercase tracking-widest border-b border-stone-800 w-full text-center pb-2 mb-4 shrink-0 flex items-center justify-center gap-2">
+                                    Card Inspector
+                                    {inspectedCard && (
+                                        <svg onClick={()=>setZoomedCard(inspectedCard)} className="w-4 h-4 text-stone-400 hover:text-amber-400 cursor-pointer" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                                     )}
-                                </>
+                                </span>
+                                
+                                {inspectedCard ? (
+                                    <div onClick={()=>setZoomedCard(inspectedCard)} className="w-[280px] h-[392px] relative rounded-2xl overflow-hidden shadow-2xl border-2 border-amber-600 shrink-0 bg-stone-850 cursor-pointer group">
+                                        {inspectedCard.image ? (
+                                            <img src={inspectedCard.image} alt={inspectedCard.name} className="absolute inset-0 w-full h-full object-cover transition-transform group-hover:scale-105 duration-500" />
+                                        ) : (
+                                            <div className="absolute inset-0 bg-stone-800 flex flex-col p-6 text-center items-center justify-center">
+                                                <span className="text-2xl font-bold text-stone-200 mb-2">{inspectedCard.name}</span>
+                                                <span className="text-base font-mono text-amber-500 mb-6">{inspectedCard.cost}G</span>
+                                                <p className="text-sm text-stone-400 italic">{inspectedCard.description}</p>
+                                                <span className="text-xs text-stone-500 mt-auto uppercase">{inspectedCard.type}</span>
+                                            </div>
+                                        )}
+                                        <div className="absolute top-2 right-2 bg-black/60 p-1 rounded opacity-0 group-hover:opacity-100 transition">
+                                            <svg className="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="w-[280px] h-[392px] border-2 border-dashed border-stone-700 rounded-2xl flex flex-col items-center justify-center p-4 bg-stone-900/50 shrink-0">
+                                        <svg className="w-10 h-10 text-stone-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                                        <span className="text-sm font-mono text-stone-600 uppercase text-center">Select a card<br/>to view details</span>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Status Effect Markers UI */}
+                            {isMyCard && (
+                                <div className="bg-stone-950 border border-stone-800 rounded-xl p-4">
+                                    <span className="text-[10px] font-bold text-stone-500 uppercase tracking-widest block mb-3 text-center">Status Markers</span>
+                                    <div className="flex justify-between px-2">
+                                        {MARKER_COLORS.map(c => {
+                                            const count = inspectedCard.markers?.[c.bg] || 0;
+                                            return (
+                                                <div key={c.bg} className="flex flex-col items-center gap-1.5">
+                                                    <button onClick={()=>addMarker(c.bg, 1)} className="text-stone-400 hover:text-stone-200 bg-stone-800 w-6 h-6 rounded flex justify-center items-center leading-none">+</button>
+                                                    <div className="w-5 h-5 rounded-full border border-stone-600 relative shadow-inner" style={{backgroundColor: c.bg}}>
+                                                        {count > 0 && <span className="absolute -top-2 -right-2 bg-stone-800 text-white text-[10px] w-4 h-4 flex items-center justify-center rounded-full font-bold">{count}</span>}
+                                                    </div>
+                                                    <button onClick={()=>addMarker(c.bg, -1)} className="text-stone-400 hover:text-stone-200 bg-stone-800 w-6 h-6 rounded flex justify-center items-center leading-none">-</button>
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
+                                </div>
                             )}
+
+                            {/* Utility Panel (Dice & Actions) */}
+                            <div className="bg-stone-950 border border-stone-800 rounded-xl p-4 flex flex-col gap-4">
+                                <div>
+                                    <span className="text-[10px] font-bold text-stone-500 uppercase tracking-widest block mb-2 text-center">Dice Roller</span>
+                                    <div className="flex gap-2 justify-center">
+                                        <button onClick={()=>rollDice(6)} className="flex-1 bg-stone-800 hover:bg-stone-700 text-stone-300 font-bold py-2 rounded text-xs transition border border-stone-700 shadow">Roll D6</button>
+                                        <button onClick={()=>rollDice(20)} className="flex-1 bg-stone-800 hover:bg-stone-700 text-stone-300 font-bold py-2 rounded text-xs transition border border-stone-700 shadow">Roll D20</button>
+                                    </div>
+                                </div>
+
+                                <div className="border-t border-stone-800 pt-3">
+                                    <button onClick={clearAllActions} className="w-full bg-amber-900/30 hover:bg-amber-900/60 text-amber-500 border border-amber-900/50 rounded py-2 text-xs font-bold uppercase transition flex items-center justify-center gap-2">
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                                        Refresh All Actions
+                                    </button>
+                                </div>
+                            </div>
+
                         </div>
                     </div>
 
                     {/* Universal Viewer Modal */}
                     {viewModal.isOpen && (
-                        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-                            <div className="bg-stone-900 border border-amber-900/40 p-6 rounded-xl w-full max-w-4xl max-h-[80vh] flex flex-col">
-                                <div className="flex justify-between items-center mb-4">
-                                    <h3 className="text-lg font-bold text-amber-500">{viewModal.title}</h3>
-                                    <button onClick={()=>setViewModal({ isOpen: false })} className="text-stone-400 hover:text-white border border-stone-700 hover:bg-stone-800 px-3 py-1 rounded transition">Close</button>
+                        <div className="fixed inset-0 bg-black/80 z-50 flex flex-col items-center justify-center p-6 backdrop-blur-sm">
+                            <div className="bg-stone-900 border border-amber-900/40 p-6 rounded-2xl w-full max-w-5xl h-[80vh] flex flex-col shadow-2xl relative">
+                                <div className="flex justify-between items-center mb-6 shrink-0 border-b border-stone-800 pb-4">
+                                    <h3 className="text-xl font-black text-amber-500 uppercase tracking-widest">{viewModal.title} <span className="text-stone-500 font-mono text-sm ml-2">({viewModal.cards.length})</span></h3>
+                                    <button onClick={()=>setViewModal({ isOpen: false })} className="text-stone-400 hover:text-white border border-stone-700 hover:bg-stone-800 px-4 py-1.5 rounded transition uppercase text-xs font-bold">Close Menu</button>
                                 </div>
-                                <div className="flex-1 overflow-y-auto grid grid-cols-4 md:grid-cols-6 gap-3 pr-2">
+                                
+                                <div className="flex-1 overflow-y-auto pr-2 flex flex-wrap gap-4 content-start justify-center">
                                     {(viewModal.onSelect ? [...viewModal.cards].sort(() => Math.random() - 0.5) : viewModal.cards).map((card, i) => {
                                         const realIdx = viewModal.onSelect ? viewModal.cards.findIndex(c => c.instanceId === card.instanceId) : null;
+                                        
                                         return (
-                                            <div key={card.instanceId + i} onClick={()=> viewModal.onSelect ? viewModal.onSelect(realIdx) : null} className={`border border-stone-800 bg-stone-950 p-2 rounded relative overflow-hidden h-24 flex flex-col ${viewModal.onSelect ? 'cursor-pointer hover:border-amber-500 transition' : ''}`}>
-                                                {card.image && <img src={card.image} className="absolute inset-0 w-full h-full object-cover opacity-30" />}
-                                                <div className="relative text-[10px] font-bold text-stone-200 truncate z-10 bg-stone-950/80 p-0.5 rounded">{card.name}</div>
-                                                <div className="relative text-[8px] text-stone-400 mt-1 z-10">{card.type}</div>
+                                            <div 
+                                                key={card.instanceId + i} 
+                                                onClick={()=> {
+                                                    if (viewModal.onSelect) viewModal.onSelect(realIdx);
+                                                    else if (viewModal.type === 'myGrave' || viewModal.type === 'myVoid') setModalSelectedIdx(modalSelectedIdx === i ? null : i);
+                                                }} 
+                                                className={`w-[100px] h-[140px] relative transition-transform hover:scale-105 ${viewModal.onSelect || viewModal.type === 'myGrave' || viewModal.type === 'myVoid' ? 'cursor-pointer' : ''}`}
+                                            >
+                                                {renderCardLayout(card)}
+
+                                                {/* Action Overlay for Grave/Void Management */}
+                                                {modalSelectedIdx === i && (viewModal.type === 'myGrave' || viewModal.type === 'myVoid') && (
+                                                    <div className="absolute inset-0 bg-stone-950/95 z-30 flex flex-col justify-center gap-2 p-2 rounded-lg border border-amber-500 shadow-xl">
+                                                        <button onClick={(e)=>{e.stopPropagation(); moveFromPile(viewModal.type, i, 'hand')}} className="bg-stone-800 hover:bg-stone-700 text-stone-200 text-[10px] w-full py-2 rounded font-bold uppercase transition">To Hand</button>
+                                                        {viewModal.type === 'myGrave' && (
+                                                            <button onClick={(e)=>{e.stopPropagation(); moveFromPile(viewModal.type, i, 'void')}} className="bg-indigo-900 hover:bg-indigo-800 text-indigo-200 text-[10px] w-full py-2 rounded font-bold uppercase transition">To Void</button>
+                                                        )}
+                                                        {viewModal.type === 'myVoid' && (
+                                                            <button onClick={(e)=>{e.stopPropagation(); moveFromPile(viewModal.type, i, 'grave')}} className="bg-stone-800 hover:bg-stone-700 text-stone-200 text-[10px] w-full py-2 rounded font-bold uppercase transition">To Graveyard</button>
+                                                        )}
+                                                    </div>
+                                                )}
                                             </div>
                                         );
                                     })}
-                                    {viewModal.cards.length === 0 && <div className="col-span-full text-center text-stone-600 italic text-sm mt-10">This area is empty.</div>}
+                                    {viewModal.cards.length === 0 && (
+                                        <div className="col-span-full w-full h-full flex items-center justify-center text-stone-600 italic text-lg mt-10">
+                                            This area is completely empty.
+                                        </div>
+                                    )}
                                 </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ZOOM MODAL (Matches the Deck Builder) */}
+                    {zoomedCard && (
+                        <div className="fixed inset-0 bg-black/90 z-[60] flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setZoomedCard(null)}>
+                            <div className="w-[300px] h-[420px] sm:w-[400px] sm:h-[560px] relative rounded-2xl overflow-hidden shadow-2xl border-2 border-amber-700" onClick={e => e.stopPropagation()}>
+                                {zoomedCard.image ? (
+                                     <img src={zoomedCard.image} alt={zoomedCard.name} className="w-full h-full object-cover" />
+                                ) : (
+                                     <div className="flex flex-col items-center justify-center h-full bg-stone-800 text-stone-200 p-6 text-center border-4 border-stone-900">
+                                         <h2 className="text-3xl font-bold mb-4 text-amber-500">{zoomedCard.name}</h2>
+                                         <p className="text-stone-400 italic text-sm">{zoomedCard.description}</p>
+                                     </div>
+                                )}
+                                <button onClick={() => setZoomedCard(null)} className="absolute top-3 right-3 bg-stone-900/80 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-rose-600 border border-stone-700 transition">X</button>
                             </div>
                         </div>
                     )}
