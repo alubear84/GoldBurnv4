@@ -21,9 +21,11 @@
     <script type="text/babel" data-type="module">
         import React, { useState, useEffect, useMemo, createContext, useContext, useRef } from 'https://esm.sh/react@18.2.0';
         import ReactDOM from 'https://esm.sh/react-dom@18.2.0/client';
+
         // ============================================================================
         // FORMATING 1500x2100 
         // ============================================================================
+
         // ============================================================================
         // v1 CARD DATABASE
         // ============================================================================
@@ -47,7 +49,7 @@
 { id: 'SDBA_deushexer', name: 'Deus Hexer', type: 'Troop', limit: 1, hp: 3, cost: 5, set: 'Bandits Arrival', image: '(SDBA) DeusHexer.jpg', description: 'When a vital troop you control takes damage, you can summon this card from your hand for no cost. Hex (o): deal 2 dmg' },
 { id: 'SDBA_engraveengrave', name: 'Engrave Engrave', type: 'Act', set: 'Bandits Arrival', image: '(SDBA) EngraveEngrave.jpg', description: 'Target a card in either players graveyard; expel that target.' },
 { id: 'SDBA_goobis', name: 'Goobis', type: 'Troop', limit: 3, hp: 4, cost: 4, set: 'Bandits Arrival', image: '(SDBA) Goobis.jpg', description: 'Gindle (0): Heal 4. Skimble (5): target a troop in your graveyard; ressurect that target. "Triangle."' },
-{ id: 'SDBA_heartandsoul', name: 'Heart and Soul', type: 'Vital Troop', limit: 0, hp: 20, cost: 0, set: 'Bandits Arrival', image: '(SDBA) HeartAndSoul.jpg', description: 'This card can make up to three actions per turn. This card is unaffected by the move effects of your opponentscards. Aid (o): Heal self for 1. Prepare (o): You gain 1 gold.' },
+{ id: 'SDBA_heartandsoul', name: 'Heart and Soul', type: 'Vital', limit: 0, hp: 20, cost: 0, set: 'Bandits Arrival', image: '(SDBA) HeartAndSoul.jpg', description: 'This card can make up to three actions per turn. This card is unaffected by the move effects of your opponentscards. Aid (o): Heal self for 1. Prepare (o): You gain 1 gold.' },
 { id: 'SDBA_locustswarm', name: 'Locust Swarm', type: 'Act', set: 'Bandits Arrival', image: '(SDBA) LocustSwarm.jpg', description: 'All of your opponent troops gain 3 poison counters (remove 1 counter at the end of each turn, deal 1 dmg.)' },
 { id: 'SDBA_meathook', name: 'Meat Hook', type: 'Troop', limit: 1, hp: 3, cost: 3, set: 'Bandits Arrival', image: '(SDBA) MeatHook.jpg', description: 'Hook Shot (3): Deal 2 dmg, target is moved up 1, and cannot move or be moved until the end of the next turn. "Rest assured, it is a moving experience."' },
 { id: 'SDBA_noblesacrifice', name: 'Noble Sacrifice', type: 'Act', set: 'Bandits Arrival', image: '(SDBA) NobleSacrifice.jpg', description: 'Destroy target non-vital card you control, and if you do, destroy target non-vital card your opponent controls.' },
@@ -57,8 +59,9 @@
 { id: 'SDBA_temporarytreaty', name: 'Temporary Treaty', type: 'Act', set: 'Bandits Arrival', image: '(SDBA) TemporaryTreaty.jpg', description: 'Until the end of the next turn, neither player can make actions or activate cards that would deal dmg to another card.' },
 { id: 'SDBA_watchtower', name: 'Watch Tower', type: 'Building', limit: 3, hp: 5, cost: 4, set: 'Bandits Arrival', image: '(SDBA) WatchTower.jpg', description: 'Your troops can make the move action in addition to their regular action. Arrows (1): deal 1 dmg. "At least we know wellalways have someone watching."' },
 { id: 'SDBA_thegoldmine', name: 'The Gold Mine', type: 'Building', limit: 1, hp: 10, cost: 4, set: 'Bandits Arrival', image: '(SDBA) TheGoldMine.jpg', description: 'When this card is destroyed, gain gold equal to the amount of gold tokens that were on this card. Gold Rush (0): place 2 gold tokens on this card. "A little blacklung never hurt anyone." -last words of an underpaid miner' },
-{ id: 'SDBA_theifoftheivery', name: 'Thief of Thievery', type: 'Troop', limit: 1, hp: 1, cost: 3, set: 'Bandits Arrival', image: '(SDBA) TheifOfTheivery.jpg', description: 'That ThiefsThievery (0): your opponent loses 2 gold, you gain 2 gold. "No ma'am this is MY wallet."' },
+{ id: 'SDBA_theifoftheivery', name: 'Thief of Thievery', type: 'Troop', limit: 1, hp: 1, cost: 3, set: 'Bandits Arrival', image: '(SDBA) TheifOfTheivery.jpg', description: 'That ThiefsThievery (0): your opponent loses 2 gold, you gain 2 gold. "No ma\'am this is MY wallet."' },
 { id: 'SDBA_vacationintheabyss', name: 'Vacation in the Abyss', type: 'Act', set: 'Bandits Arrival', image: '(SDBA) VacationInTheAbyss.jpg', description: 'Target a non-vital troop on the field; It is expelled until the end of the turn.' },
+
 // ============================================================================
 // Starter Deck Devout Patronage
 // ============================================================================
@@ -80,7 +83,7 @@
 { id: 'SDDP_uproot', name: 'Uproot', type: 'Act', set: 'The PatronsPromise', image: '(SDDP) Uproot.jpg', description: 'Relocate a card in your opponentsmain tiles to another one of your opponentsmain tiles.' },
 { id: 'SDDP_urnofofferings', name: 'Urn of Offerings', type: 'Building', limit: 2, hp: 1, cost: 2, set: 'The PatronsPromise', image: '(SDDP) UrnofOfferings.jpg', description: '(Hard Single) If this card is offered: You can summon 1 "Urn of Offerings" from your deck for no cost. Cleansing Aroma (1): Heal 3. "Some things require more than just gold."' },
 { id: 'SDDP_vaycationintheabyss', name: 'Vacation in the Abyss', type: 'Act', set: 'The PatronsPromise', image: '(SDDP) VaycationintheAbyss.jpg', description: 'Target a non-vital troop on the field; It is expelled until the end of the turn.' },
-{ id: 'SDDP_voiceofpatron', name: 'Voice of The Patron', type: 'Vital Troop', limit: 0, hp: 20, cost: 0, set: 'The PatronsPromise', image: '(SDDP) VoiceofPatron.jpg', description: 'Prepare (0): Gain 1 gold. Devout Prayer (3): (Single) add a "The Patron" card with Offering from your deck to your hand. Call Followers (1): (Single) create a "Follower Of The Patron" token. (Troop/2 HP/Human - Cultist) "His voice will sing you your final sermon."' },
+{ id: 'SDDP_voiceofpatron', name: 'Voice of The Patron', type: 'Vital', limit: 0, hp: 20, cost: 0, set: 'The PatronsPromise', image: '(SDDP) VoiceofPatron.jpg', description: 'Prepare (0): Gain 1 gold. Devout Prayer (3): (Single) add a "The Patron" card with Offering from your deck to your hand. Call Followers (1): (Single) create a "Follower Of The Patron" token. (Troop/2 HP/Human - Cultist) "His voice will sing you your final sermon."' },
 { id: 'SDDP_willofthemartyr', name: 'Will of the Martyr', type: 'Act', set: 'The PatronsPromise', image: '(SDDP) WilloftheMartyr.jpg', description: 'Target a card on the field; it cannot be expelled or destroyed until the end of the turn.' },
 { id: 'SDDP_deushexer', name: 'Deus Hexer', type: 'Troop', limit: 1, hp: 3, cost: 5, set: 'Devout Patronage', image: '(SDDP) DeusHexer.jpg', description: 'When a vital troop you control takes damage, you can summon this card from your hand for no cost. Hex (o): deal 2 dmg' },
 { id: 'SDDP_abominablevessel', name: 'Abominable Vessel', type: 'Troop', limit: 1, hp: 7, cost: 5, set: 'Devout Patronage', image: '(SDDP) AbominableVessel.jpg', description: 'Offering I. Expel the card used for this cardsoffering instead of sending it to the GY. If this card leaves the field: (Hard Single) Summon the card that was exiled for this cardsoffering for no cost. It cannot attack. Claw Crush (1): deal 5 dmg' },
@@ -88,6 +91,7 @@
 { id: 'SDDP_banditwindowmaker', name: 'Bandit Widowmaker', type: 'Troop', limit: 2, hp: 7, cost: 5, set: 'Devout Patronage', image: '(SDDP) BanditWindowmaker.jpg', description: 'Slay (1): Deal 5 dmg. Bounty (2): Deal 3 dmg. if this move destroys an enemy, gain 3 gold.' },
 { id: 'SDDP_clientofthepatron', name: 'Client of the Patron', type: 'Troop', limit: 2, hp: 4, cost: 2, set: 'Devout Patronage', image: '(SDDP) ClientofthePatron.jpg', description: 'This card can be used as two offerings for the summon of a "The Patron" card. If a Deity "The Patron" card is destroyed by your opponent while this card is in your GY: you can summon this card from your GY for no cost. Torch (0): Deal 1 dmg. "you will venture further into the chamber in search of him."' },
 { id: 'SDDP_deadofwinter', name: 'Dead of Winter', type: 'Act', set: 'Devout Patronage', image: '(SDDP) DeadofWinter.jpg', description: 'Destroy all non-vital cards your opponent controls. "and then. silence."' },
+
 // ============================================================================
 // Starter Deck Dread Apocolypse
 // ============================================================================
@@ -97,7 +101,7 @@
 { id: 'SDDA_deusdreader', name: 'Deus Dreader', type: 'Troop', limit: 1, hp: 1, cost: 4, set: 'Bandits Arrival', image: '(SDDA) DeusDreader.jpg', description: 'If a "Dread" card you control is destroyed while this card is in your GY: (Hard Single) Pay 2 gold; resurrect this card from your graveyard. (Resurrect): place 2 poison counters on the field. Ectopoison (2): Place 3 poison counters on target' },
 { id: 'SDDA_deusfisher', name: 'Deus Fisher', type: 'Troop', limit: 1, hp: 2, cost: 6, set: 'Bandits Arrival', image: '(SDDA) DeusFisher.jpg', description: 'If a card you control is dealt dmg by an opponentscard, you can summon this card from your hand for no cost. (summon): move a card your opponent controls 1 in any direction. That card cannot make a movement action while this card is on the field. Barbed (0): pull target 1, then deal 2 dmg' },
 { id: 'SDDA_deushexer', name: 'Deus Hexer', type: 'Troop', limit: 1, hp: 3, cost: 5, set: 'Bandits Arrival', image: '(SDDA) DeusHexer.jpg', description: 'When a vital troop you control takes damage, you can summon this card from your hand for no cost. Hex (o): deal 2 dmg' },
-{ id: 'SDDA_dreadapprenticetox', name: 'Dread Apprentice Tox', type: 'Vital Troop', limit: 0, hp: 20, cost: 0, set: 'Bandits Arrival', image: '(SDDA) DreadApprenticeTox.jpg', description: 'This card can make up to three actions per turn. At the start of your turn: Place x poison counters on the field where x is the amount of undead cards you control. Prepare (o): You gain 1 gold. Loop of the departed (1): (single) send a "Dread" card you control to the GY. then, resurrect it with half HP.' },
+{ id: 'SDDA_dreadapprenticetox', name: 'Dread Apprentice Tox', type: 'Vital', limit: 0, hp: 20, cost: 0, set: 'Bandits Arrival', image: '(SDDA) DreadApprenticeTox.jpg', description: 'This card can make up to three actions per turn. At the start of your turn: Place x poison counters on the field where x is the amount of undead cards you control. Prepare (o): You gain 1 gold. Loop of the departed (1): (single) send a "Dread" card you control to the GY. then, resurrect it with half HP.' },
 { id: 'SDDA_dreadbandit', name: 'Dread Bandit', type: 'Troop', limit: 1, hp: 2, cost: 3, set: 'Bandits Arrival', image: '(SDDA) DreadBandit.jpg', description: 'If this card is sent from the field to the graveyard: you can pay 1 gold; resurrect this card. If this card is resurrected: place 1 poison counter on the field or place 1 strength marker on this card. Putrid Slash (1): deal 2 dmg. Toxic Toss (2): place 2 poison counters' },
 { id: 'SDDA_dreadcaptain', name: 'Dread Captain', type: 'Troop', limit: 2, hp: 6, cost: 4, set: 'Bandits Arrival', image: '(SDDA) DreadCaptain.jpg', description: 'This card does not take dmg from poison counters. This card does +1 dmg for every poison counter on it. (Resurrect): place a poison counter on this card for each "Dread" card you control, except this card. Blight Striken (1): deal 2 dmg to up to two seperate targets' },
 { id: 'SDDA_dreadhuntsman', name: 'Dread Huntsman', type: 'Troop', limit: 2, hp: 3, cost: 4, set: 'Bandits Arrival', image: '(SDDA) DreadHuntsman.jpg', description: 'This card does not take dmg from poison counters. If this card is sent from the field to the GY by your opponent: (Hard Single) You can pay 2 gold; Resurrect this card. (Resurrect): Place 2 poison counters on the field. Tox Shot (2): Place 3 Poison counters on a card on the field. Acid Blast (2): Deal x dmg for each poison counter on this card.' },
@@ -117,13 +121,14 @@
 { id: 'SDDA_unexpectedmutation', name: 'Unexpected Mutation', type: 'Act', set: 'Devout Patronage', image: '(SDDA) UnexpectedMutation.jpg', description: 'Target a card your opponent controls; apply one of the following effects: 1- Place 4 poison counters on it. 2- Remove up to 4 poison counters from it and deal that much dmg.' },
 { id: 'SDDA_vacationintheabyss', name: 'Vacation in the Abyss', type: 'Act', set: 'Devout Patronage', image: '(SDDA) VacationInTheAbyss.jpg', description: 'Target a non-vital troop on the field; It is expelled until the end of the turn.' },
 { id: 'SDDA_willofthemartyr', name: 'Will of the Martyr', type: 'Act', set: 'Devout Patronage', image: '(SDDA) WillOfTheMartyr.jpg', description: 'Target a card on the field; it cannot be expelled or destroyed until the end of the turn.' },
+
 // ============================================================================
 // Starter Deck Aurum Guild
 // ============================================================================
 { id: 'SDAG_deadofwinter', name: 'Dead of Winter', type: 'Act', set: 'Devout Patronage', image: '(SDAG) DeadofWinter.jpg', description: 'Destroy all non-vital cards your opponent controls. "and then. silence."' },
 { id: 'SDAG_aurumassassin', name: 'Aurum Assassin', type: 'Troop', limit: 1, hp: 4, cost: 4, set: 'Devout Patronage', image: '(SDAG) AurumAssassin.jpg', description: 'If this card attacks a non-vital card with a bounty marker: expel that card. Bounty (0): Place 1 Bounty Marker on target. Infiltrate (1): (Column) Deal 1 dmg' },
 { id: 'SDAG_aurumbondswomin', name: 'Aurum Bondswoman', type: 'Troop', limit: 2, hp: 1, cost: 1, set: 'Devout Patronage', image: '(SDAG) AurumBondswomin.jpg', description: 'Cards your opponent controls with bounty markers cannot attack this card. If a hunter you control destroys a card your opponent controls with a bounty marker: gain 1 gold. Bounty (0): Place 1 Bounty Marker on target' },
-{ id: 'SDAG_aurumheadmaster', name: 'Aurum Headmaster', type: 'Vital Troop', limit: 0, hp: 25, cost: 0, set: 'Devout Patronage', image: '(SDAG) AurumHeadMaster.jpg', description: 'Prepare (0): Gain 1 gold. Marked for death (0): (Single) place 1 bounty marker on target. Marked Impale (0): (Single) Deal 2 dmg. Deals +1 dmg for every bounty marker on target' },
+{ id: 'SDAG_aurumheadmaster', name: 'Aurum Headmaster', type: 'Vital', limit: 0, hp: 25, cost: 0, set: 'Devout Patronage', image: '(SDAG) AurumHeadMaster.jpg', description: 'Prepare (0): Gain 1 gold. Marked for death (0): (Single) place 1 bounty marker on target. Marked Impale (0): (Single) Deal 2 dmg. Deals +1 dmg for every bounty marker on target' },
 { id: 'SDAG_aurumpeltergeist', name: 'Aurum Peltergeist', type: 'Troop', limit: 1, hp: 3, cost: 2, set: 'Devout Patronage', image: '(SDAG) AurumPeltergeist.jpg', description: 'This card can use "Bounty" in addition to itsnormal action. Bounty (0): Place 1 Bounty Marker on target. Bolt (1): Deal 1 dmg. This attack deals +1 dmg for every Bounty Marker on target' },
 { id: 'SDAG_aurumvagaboblin', name: 'Aurum Vagabondlin', type: 'Troop', limit: 2, hp: 4, cost: 4, set: 'Devout Patronage', image: '(SDAG) AurumVagaboblin.jpg', description: 'This card can use "Bounty" in addition to itsnormal action. Bounty (0): Place 1 Bounty Marker on target. Hack Target (0): Deal 3 dmg. If this attack destroys a card, gain 2 gold' },
 { id: 'SDAG_aurumvoidmerc', name: 'Aurum Void Merc', type: 'Troop', limit: 2, hp: 3, cost: 3, set: 'Devout Patronage', image: '(SDAG) AurumVoidMerc.jpg', description: 'You can also summon this card from your hand (for no cost) by expelling two troops in your GY that share exactly 1 subtype. Bounty (0): Place 1 Bounty Marker on target. Abyss Hunter (0): Deal 1 dmg. this attack deals +2 dmg for every bounty marker on target.' },
@@ -245,7 +250,7 @@
                     for (const key in parsed) if (MASTER_CARDS.find(c => c.id === key)) cleaned[key] = parsed[key];
                     return cleaned;
                 }
-                return STARTER_DECKS["Bandits Arrival Starter"];
+                return STARTER_DECKS["Bandits Arrival"];
             });
 
             const updateDeckQty = (id, amount) => {
@@ -542,7 +547,7 @@
                         </div>
                         <div>
                             <label className="text-[10px] font-bold text-stone-500 uppercase">Room Code (Leave blank to Create)</label>
-                            <input type="text" value={roomCode} onChange={e=>setRoomCode(e.target.value)} className="w-full bg-stone-950 border border-stone-800 rounded px-3 py-2 text-amber-500 outline-none focus:border-amber-600" placeholder="On top right of waiting room" />
+                            <input type="text" value={roomCode} onChange={e=>setRoomCode(e.target.value)} className="w-full bg-stone-950 border border-stone-800 rounded px-3 py-2 text-amber-500 uppercase outline-none focus:border-amber-600" placeholder="On top right of waiting room" />
                         </div>
                         <button onClick={() => onJoin(roomCode || Math.random().toString(36).substring(2,6).toUpperCase(), username || 'Duelist', !roomCode)} className="w-full bg-gradient-to-r from-amber-800 to-amber-950 text-amber-100 font-bold uppercase py-3 rounded-lg text-xs hover:brightness-110 border border-amber-700/50 transition">
                             {roomCode ? 'Join Match' : 'Create Match'}
@@ -711,7 +716,7 @@
                     }
                     if (data.type === 'CONCEDE') {
                         if (data.reason === 'VITAL_DEAD') {
-                            alert("🎉 You Win! The enemysVital fell to 0.");
+                            alert("🎉 You Win! The enemy's Vital fell to 0.");
                         } else {
                             alert("🎉 You Win! Your opponent has conceded the match.");
                         }
@@ -1003,7 +1008,7 @@
 
                 if (isOpponentOwned) {
                     if (conn && !isSoloTest) conn.send({ type: 'OPP_ZONE_AWAY', dest, card });
-                    addLog(`${username} sent ${card.name} to the opponents${dest}.`, true);
+                    addLog(`${username} sent ${card.name} to the opponent's ${dest}.`, true);
                 } else {
                     if (dest === 'grave') {
                         setGrave([card, ...grave]);
@@ -1011,6 +1016,9 @@
                     } else if (dest === 'void') {
                         setVoidZone([card, ...voidZone]);
                         addLog(`${username} exiled ${card.name} to the Void.`, true);
+                    } else if (dest === 'deck') {
+                        setDeck(prev => [...prev, card].sort(() => Math.random() - 0.5));
+                        addLog(`${username} shuffled ${card.name} into their Deck.`, true);
                     }
                 }
                 setActiveMenu(null);
@@ -1099,6 +1107,8 @@
                                 </div>
                                 <button onClick={(e)=>{e.stopPropagation(); sendFieldCardAway(showMenuParams.type, 'grave', showMenuParams.r, showMenuParams.c)}} className="bg-stone-800 hover:bg-stone-700 transition text-stone-200 text-[10px] w-full py-1 rounded">To Graveyard</button>
                                 <button onClick={(e)=>{e.stopPropagation(); sendFieldCardAway(showMenuParams.type, 'void', showMenuParams.r, showMenuParams.c)}} className="bg-indigo-900 hover:bg-indigo-800 transition text-indigo-200 text-[10px] w-full py-1 rounded">To Void</button>
+                                <button onClick={(e)=>{e.stopPropagation(); sendFieldCardAway(showMenuParams.type, 'deck', showMenuParams.r, showMenuParams.c)}} className="bg-emerald-900 hover:bg-emerald-800 transition text-emerald-200 text-[10px] w-full py-1 rounded">To Deck</button>
+                                <button onClick={(e)=>{e.stopPropagation(); setActiveMenu(null); setLockedInspectorId(null);}} className="text-[9px] text-stone-500 hover:text-stone-300 transition underline mt-1">Cancel</button>
                             </div>
                         )}
                     </div>
@@ -1308,8 +1318,7 @@
                                     <div className="flex-1 overflow-y-auto space-y-1.5 font-mono text-[10px] pr-1 mb-2">
                                         {chatLogs.map((c, i) => (
                                             <div key={i} className="leading-tight">
-                                                <span className={c.isMe ? "text-emerald-400 font-bold" : "text-rose-500 font-bold"}
-                                        >{c.sender}: </span>
+                                                <span className={c.isMe ? "text-emerald-400 font-bold" : "text-rose-500 font-bold"}>{c.sender}: </span>
                                                 <span className="text-white">{c.msg}</span>
                                             </div>
                                         ))}
@@ -1430,7 +1439,7 @@
                                                 )}
                                                 
                                                 {!card.image && (
-                                                    <div className="absolute inset-0 p-2 flex flex-col items-center justify-center text-center">
+                                                    <div className="absolute inset-0 bg-stone-900 p-2 flex flex-col items-center justify-center text-center">
                                                         <span className="text-[8px] font-bold text-stone-200">{card.name}</span>
                                                     </div>
                                                 )}
@@ -1439,6 +1448,7 @@
                                                     <div className="absolute inset-0 bg-stone-950/90 z-20 flex flex-col items-center justify-center gap-1 p-2">
                                                         <button onClick={(e)=>{e.stopPropagation(); sendHandCardAway(idx, 'grave');}} className="bg-stone-800 hover:bg-stone-700 text-stone-200 text-[9px] w-full py-1 rounded border border-stone-700 transition">To Grave</button>
                                                         <button onClick={(e)=>{e.stopPropagation(); sendHandCardAway(idx, 'void');}} className="bg-indigo-900 hover:bg-indigo-800 text-indigo-200 text-[9px] w-full py-1 rounded border border-indigo-800 transition">To Void</button>
+                                                        <button onClick={(e)=>{e.stopPropagation(); sendHandCardAway(idx, 'deck');}} className="bg-emerald-900 hover:bg-emerald-800 text-emerald-200 text-[9px] w-full py-1 rounded border border-emerald-800 transition">To Deck</button>
                                                     </div>
                                                 )}
                                             </div>
