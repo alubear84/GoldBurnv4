@@ -13,9 +13,11 @@
         ::-webkit-scrollbar-track { background: #0f0a0a; }
         ::-webkit-scrollbar-thumb { background: #451a1a; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #7f2d2d; }
+        .ping-line { stroke-dasharray: 10; animation: dash 1s linear infinite; }
+        @keyframes dash { to { stroke-dashoffset: -20; } }
     </style>
 </head>
-<body class="bg-stone-950 text-stone-100 min-h-screen font-serif selection:bg-amber-800 selection:text-amber-100">
+<body class="bg-stone-950 text-stone-100 min-h-screen font-serif selection:bg-amber-800 selection:text-amber-100 relative">
 
     <div id="root"></div>
 
@@ -562,7 +564,6 @@ const STARTER_DECKS = {
         'SDDP_tradinghall': 1
     }
 };
-
         const MARKER_COLORS = [
             { bg: '#ef4444', name: 'Red' }, { bg: '#22c55e', name: 'Green' }, { bg: '#3b82f6', name: 'Blue' }, { bg: '#a855f7', name: 'Purple' }, { bg: '#eab308', name: 'Yellow' }
         ];
@@ -578,16 +579,19 @@ const STARTER_DECKS = {
                     for (const key in parsed) if (MASTER_CARDS.find(c => c.id === key)) cleaned[key] = parsed[key];
                     return cleaned;
                 }
-                return STARTER_DECKS["Bandits Arrival"];
+                return STARTER_DECKS["Bandits Arrival Starter"] || {};
+            });
+            
+            const [savedDecks, setSavedDecks] = useState(() => {
+                const stored = localStorage.getItem('v1_saved_decks_list');
+                return stored ? JSON.parse(stored) : {};
             });
 
             const updateDeckQty = (id, amount) => {
                 setCustomDeck(prev => {
                     const cardDef = MASTER_CARDS.find(c => c.id === id);
                     const limit = cardDef.limit !== undefined ? cardDef.limit : 3;
-                    
                     const currentQty = prev[id] || 0;
-                    
                     let nextQty = currentQty + amount;
                     nextQty = Math.max(0, Math.min(nextQty, limit));
 
@@ -611,8 +615,20 @@ const STARTER_DECKS = {
                 localStorage.setItem('v1_saved_deck', JSON.stringify(cleaned));
             };
 
+            const clearDeck = () => {
+                setCustomDeck({});
+                localStorage.setItem('v1_saved_deck', '{}');
+            };
+
+            const saveCustomDeck = (name) => {
+                if(!name) return;
+                const newDecks = { ...savedDecks, [name]: customDeck };
+                setSavedDecks(newDecks);
+                localStorage.setItem('v1_saved_decks_list', JSON.stringify(newDecks));
+            };
+
             return (
-                <GameContext.Provider value={{ customDeck, updateDeckQty, loadEntireDeck }}>
+                <GameContext.Provider value={{ customDeck, updateDeckQty, loadEntireDeck, clearDeck, savedDecks, saveCustomDeck }}>
                     {children}
                 </GameContext.Provider>
             );
@@ -622,30 +638,32 @@ const STARTER_DECKS = {
         // DECK BUILDER (FORGE)
         // ============================================================================
         const DeckBuilder = ({ onTestDeck }) => {
-            const { customDeck, updateDeckQty, loadEntireDeck } = useContext(GameContext);
+            const { customDeck, updateDeckQty, loadEntireDeck, clearDeck, savedDecks, saveCustomDeck } = useContext(GameContext);
             const [search, setSearch] = useState('');
             const [searchKeyword, setSearchKeyword] = useState('');
             const [costFilter, setCostFilter] = useState('All');
             const [typeFilter, setTypeFilter] = useState('All');
             const [setFilter, setSetFilter] = useState('All');
             const [sortOrder, setSortOrder] = useState('A-Z');
+            const [deckListSort, setDeckListSort] = useState('Name');
             
             const [selectedSubtypes, setSelectedSubtypes] = useState([]);
             const [selectedSpeeds, setSelectedSpeeds] = useState([]);
             const [showSubtypeMenu, setShowSubtypeMenu] = useState(false);
-
+            const [showDeckManager, setShowDeckManager] = useState(false);
             const [zoomedCard, setZoomedCard] = useState(null);
 
             const [selectedStarter, setSelectedStarter] = useState(Object.keys(STARTER_DECKS)[0]);
+            const [selectedCustom, setSelectedCustom] = useState('');
+            const [saveDeckName, setSaveDeckName] = useState('');
             const [importString, setImportString] = useState('');
             
-            // Custom Modals to replace window.confirm and alert on Google Sites
             const [confirmDialog, setConfirmDialog] = useState(null);
             const [exportData, setExportData] = useState(null);
 
             const uniqueTypes = [...new Set(MASTER_CARDS.map(c => c.type))].sort();
             const uniqueSets = [...new Set(MASTER_CARDS.map(c => c.set))].sort();
-
+            
             const allSubtypes = useMemo(() => {
                 const subtypes = new Set();
                 MASTER_CARDS.forEach(c => {
@@ -660,7 +678,7 @@ const STARTER_DECKS = {
             const decCost = () => setCostFilter(prev => prev === 'All' ? 0 : prev === 'X' ? 0 : Math.max(0, prev - 1));
             const clearCost = () => setCostFilter('All');
             const setCostToX = () => setCostFilter('X');
-
+            
             const handleSubtypeToggle = (st) => {
                 setSelectedSubtypes(prev => prev.includes(st) ? prev.filter(s => s !== st) : [...prev, st]);
             };
@@ -673,7 +691,6 @@ const STARTER_DECKS = {
                 let result = MASTER_CARDS.filter(card => {
                     if (search && !card.name.toLowerCase().includes(search.toLowerCase())) return false;
                     if (searchKeyword && (!card.description || !card.description.toLowerCase().includes(searchKeyword.toLowerCase()))) return false;
-                    
                     if (costFilter !== 'All' && card.cost !== costFilter) return false;
                     if (typeFilter !== 'All' && card.type !== typeFilter) return false;
                     if (setFilter !== 'All' && card.set !== setFilter) return false;
@@ -684,7 +701,6 @@ const STARTER_DECKS = {
                     if (selectedSpeeds.length > 0) {
                         if (!card.subtypes || !selectedSpeeds.some(st => card.subtypes.includes(st))) return false;
                     }
-
                     return true;
                 });
                 result.sort((a, b) => {
@@ -699,20 +715,36 @@ const STARTER_DECKS = {
             const vitalEntries = deckEntries.filter(([id]) => MASTER_CARDS.find(c => c.id === id)?.type === 'Vital');
             const mainEntries = deckEntries.filter(([id]) => MASTER_CARDS.find(c => c.id === id)?.type !== 'Vital');
             const totalCount = mainEntries.reduce((acc, [_, qty]) => acc + qty, 0);
+            
+            const isMissingVital = vitalEntries.length === 0;
+            const isInvalidSize = totalCount !== 30;
+
+            const sortedMainEntries = useMemo(() => {
+                return [...mainEntries].sort((a, b) => {
+                    const cardA = MASTER_CARDS.find(c => c.id === a[0]);
+                    const cardB = MASTER_CARDS.find(c => c.id === b[0]);
+                    if (!cardA || !cardB) return 0;
+                    if (deckListSort === 'Type') return cardA.type.localeCompare(cardB.type);
+                    if (deckListSort === 'Cost') {
+                        const costA = cardA.cost === 'X' ? 99 : parseInt(cardA.cost) || 0;
+                        const costB = cardB.cost === 'X' ? 99 : parseInt(cardB.cost) || 0;
+                        return costA - costB;
+                    }
+                    return cardA.name.localeCompare(cardB.name);
+                });
+            }, [mainEntries, deckListSort]);
 
             const handleExport = () => {
                 const dataStr = JSON.stringify(customDeck);
                 if (navigator.clipboard && window.isSecureContext) {
                     navigator.clipboard.writeText(dataStr).then(() => {
                         setConfirmDialog({ msg: "Deck code copied to clipboard!", isAlert: true });
-                    }).catch(err => {
-                        setExportData(dataStr);
-                    });
+                    }).catch(() => setExportData(dataStr));
                 } else {
                     setExportData(dataStr);
                 }
             };
-
+            
             const handleImport = () => {
                 if(!importString.trim()) return;
                 try {
@@ -724,24 +756,37 @@ const STARTER_DECKS = {
                     setConfirmDialog({ msg: "Invalid deck code format.", isAlert: true });
                 }
             };
-
+            
             const handleLoadStarter = () => {
                 const deckObj = STARTER_DECKS[selectedStarter];
                 if (deckObj) {
                     setConfirmDialog({
-                        msg: `Are you sure you want to overwrite your current deck with the ${selectedStarter}?`,
-                        onConfirm: () => {
-                            loadEntireDeck(deckObj);
-                            setConfirmDialog(null);
-                        }
+                        msg: `Are you sure you want to overwrite your current deck with ${selectedStarter}?`,
+                        onConfirm: () => { loadEntireDeck(deckObj); setConfirmDialog(null); }
                     });
                 }
+            };
+
+            const handleLoadCustom = () => {
+                const deckObj = savedDecks[selectedCustom];
+                if (deckObj) {
+                    setConfirmDialog({
+                        msg: `Are you sure you want to load custom deck: ${selectedCustom}?`,
+                        onConfirm: () => { loadEntireDeck(deckObj); setConfirmDialog(null); }
+                    });
+                }
+            };
+
+            const handleClear = () => {
+                setConfirmDialog({
+                    msg: "Are you sure you want to clear your current deck?",
+                    onConfirm: () => { clearDeck(); setConfirmDialog(null); }
+                });
             };
 
             return (
                 <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 p-6 max-w-[1500px] mx-auto">
                     
-                    {/* CUSTOM CONFIRM OVERLAY */}
                     {confirmDialog && (
                         <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
                             <div className="bg-stone-900 border border-amber-500 rounded-xl p-6 max-w-sm w-full text-center shadow-2xl">
@@ -758,7 +803,6 @@ const STARTER_DECKS = {
                         </div>
                     )}
 
-                    {/* CUSTOM EXPORT TEXTAREA */}
                     {exportData && (
                         <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
                             <div className="bg-stone-900 border border-amber-500 rounded-xl p-6 max-w-md w-full shadow-2xl">
@@ -770,9 +814,7 @@ const STARTER_DECKS = {
                         </div>
                     )}
 
-                    {/* LEFT PANEL */}
                     <div className="xl:col-span-8 bg-stone-900 border border-amber-900/30 rounded-2xl p-3 md:p-5 shadow-2xl flex flex-col h-[60vh] min-h-[500px] xl:h-[750px]">
-                        
                         <div className="border-b border-stone-800 pb-4 mb-4">
                             <h2 className="text-lg font-bold text-amber-500 uppercase tracking-wide mb-3">Deck Builder</h2>
                             
@@ -871,10 +913,24 @@ const STARTER_DECKS = {
                     {/* RIGHT PANEL */}
                     <div className="xl:col-span-4 flex flex-col gap-4 h-[60vh] min-h-[400px] xl:h-[750px]">
                         <div className="bg-stone-900 border border-amber-900/30 rounded-2xl p-5 shadow-2xl flex flex-col flex-1 min-h-0">
-                            <div className="border-b border-stone-800 pb-3 mb-3 flex justify-between items-center">
+                            
+                            {(isMissingVital || isInvalidSize) && (
+                                <div className="bg-rose-950/40 border border-rose-900/50 p-2 rounded mb-3 flex flex-col gap-1 shrink-0">
+                                    {isMissingVital && <span className="text-[10px] text-rose-400 font-bold uppercase">⚠️ Missing a Vital Card</span>}
+                                    {isInvalidSize && <span className="text-[10px] text-rose-400 font-bold uppercase">⚠️ Deck size must be exactly 30 Main Forces</span>}
+                                </div>
+                            )}
+
+                            <div className="border-b border-stone-800 pb-3 mb-3 flex justify-between items-center shrink-0">
                                 <h3 className="text-sm font-bold text-stone-300 uppercase tracking-widest">Deck List</h3>
-                                <span className="text-[10px] font-mono font-black text-amber-400 bg-amber-950/30 border border-amber-900/50 px-2 py-1 rounded">{totalCount} Cards</span>
+                                <select value={deckListSort} onChange={(e)=>setDeckListSort(e.target.value)} className="bg-stone-950 border border-stone-800 rounded px-2 py-0.5 text-[9px] text-stone-400 outline-none uppercase font-bold">
+                                    <option value="Name">Sort: Name</option>
+                                    <option value="Type">Sort: Type</option>
+                                    <option value="Cost">Sort: Cost</option>
+                                </select>
+                                <span className={`text-[10px] font-mono font-black border px-2 py-1 rounded ${totalCount === 30 ? 'text-emerald-400 bg-emerald-950/30 border-emerald-900/50' : 'text-amber-400 bg-amber-950/30 border-amber-900/50'}`}>{totalCount} Cards</span>
                             </div>
+                            
                             <div className="flex-1 overflow-y-auto space-y-4 pr-1">
                                 <div>
                                     <span className="text-[9px] uppercase tracking-widest text-stone-500 font-bold block mb-1">Vital Card (Not Counted)</span>
@@ -904,7 +960,7 @@ const STARTER_DECKS = {
                                 <div>
                                     <span className="text-[9px] uppercase tracking-widest text-stone-500 font-bold block mb-1 border-t border-stone-800 pt-2">Main Forces</span>
                                     <div className="space-y-1.5">
-                                        {mainEntries.map(([id, qty]) => {
+                                        {sortedMainEntries.map(([id, qty]) => {
                                             const c = MASTER_CARDS.find(x => x.id === id);
                                             return c ? (
                                                 <div key={id} className="bg-stone-950 border border-stone-850 px-3 py-2 rounded-xl flex justify-between items-center group">
@@ -915,7 +971,7 @@ const STARTER_DECKS = {
                                                                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                                                             </button>
                                                         </div>
-                                                        <div className="text-[9px] text-stone-500">{c.type}</div>
+                                                        <div className="text-[9px] text-stone-500">{c.type} • {c.cost}G</div>
                                                     </div>
                                                     <div className="flex items-center gap-3">
                                                         <span className="text-xs text-amber-500 font-bold">x{qty}</span>
@@ -930,24 +986,48 @@ const STARTER_DECKS = {
                         </div>
 
                         <div className="bg-stone-900 border border-stone-800 rounded-2xl p-4 shadow-xl shrink-0 flex flex-col gap-3">
-                            <div>
-                                <span className="text-[9px] uppercase tracking-widest text-stone-500 font-bold block mb-2">Deck Manager</span>
-                                <div className="flex gap-2 mb-3">
-                                    <select value={selectedStarter} onChange={(e)=>setSelectedStarter(e.target.value)} className="flex-1 bg-stone-950 border border-stone-800 rounded px-2 text-[10px] text-stone-300 outline-none">
-                                        {Object.keys(STARTER_DECKS).map(name => <option key={name} value={name}>{name}</option>)}
-                                    </select>
-                                    <button onClick={handleLoadStarter} className="bg-amber-900/30 hover:bg-amber-900/60 text-amber-500 border border-amber-900/50 rounded px-3 py-1.5 text-[10px] font-bold uppercase transition">Load</button>
-                                </div>
-                                <div className="border-t border-stone-800 pt-3">
-                                    <button onClick={handleExport} className="w-full mb-2 bg-stone-800 hover:bg-stone-700 text-stone-300 rounded px-3 py-1.5 text-[10px] font-bold uppercase transition border border-stone-700">Export Deck to Clipboard</button>
-                                    <div className="flex gap-2">
-                                        <input type="text" value={importString} onChange={(e)=>setImportString(e.target.value)} placeholder="Paste deck code..." className="flex-1 bg-stone-950 border border-stone-800 rounded px-2 py-1.5 text-[10px] text-stone-200 outline-none focus:border-indigo-600" />
-                                        <button onClick={handleImport} className="bg-indigo-900/30 hover:bg-indigo-900/60 text-indigo-400 border border-indigo-900/50 rounded px-3 py-1.5 text-[10px] font-bold uppercase transition">Import</button>
+                            <button 
+                                onClick={() => setShowDeckManager(!showDeckManager)} 
+                                className="w-full flex justify-between items-center text-[10px] font-bold text-stone-500 uppercase tracking-widest outline-none hover:text-amber-500 transition-colors"
+                            >
+                                <span>⚙️ Deck Manager Tools</span>
+                                <span>{showDeckManager ? '▲' : '▼'}</span>
+                            </button>
+
+                            {showDeckManager && (
+                                <div className="flex flex-col gap-3 mt-2 border-t border-stone-800 pt-3">
+                                    <div className="flex gap-2 mb-2">
+                                        <select value={selectedStarter} onChange={(e)=>setSelectedStarter(e.target.value)} className="flex-1 bg-stone-950 border border-stone-800 rounded px-2 text-[10px] text-stone-300 outline-none">
+                                            {Object.keys(STARTER_DECKS).map(name => <option key={name} value={name}>{name}</option>)}
+                                        </select>
+                                        <button onClick={handleLoadStarter} className="bg-amber-900/30 hover:bg-amber-900/60 text-amber-500 border border-amber-900/50 rounded px-3 py-1.5 text-[10px] font-bold uppercase transition">Load</button>
+                                    </div>
+
+                                    <div className="flex gap-2 mb-3 border-t border-stone-800 pt-2">
+                                        <select value={selectedCustom} onChange={(e)=>setSelectedCustom(e.target.value)} className="flex-1 bg-stone-950 border border-stone-800 rounded px-2 text-[10px] text-stone-300 outline-none">
+                                            <option value="">-- Load Saved Deck --</option>
+                                            {Object.keys(savedDecks).map(name => <option key={name} value={name}>{name}</option>)}
+                                        </select>
+                                        <button onClick={handleLoadCustom} disabled={!selectedCustom} className={`px-3 py-1.5 rounded text-[10px] font-bold uppercase transition border ${!selectedCustom ? 'bg-stone-800 text-stone-600 border-stone-700' : 'bg-emerald-900/30 hover:bg-emerald-900/60 text-emerald-500 border-emerald-900/50'}`}>Load</button>
+                                    </div>
+
+                                    <div className="flex gap-2 mb-3">
+                                        <input type="text" value={saveDeckName} onChange={(e)=>setSaveDeckName(e.target.value)} placeholder="Name your deck..." className="flex-1 bg-stone-950 border border-stone-800 rounded px-2 py-1.5 text-[10px] text-stone-200 outline-none focus:border-emerald-600" />
+                                        <button onClick={()=>{saveCustomDeck(saveDeckName); setSaveDeckName('');}} disabled={!saveDeckName.trim()} className={`px-3 py-1.5 rounded text-[10px] font-bold uppercase transition border ${!saveDeckName.trim() ? 'bg-stone-800 text-stone-600 border-stone-700' : 'bg-emerald-900/30 hover:bg-emerald-900/60 text-emerald-500 border-emerald-900/50'}`}>Save</button>
+                                    </div>
+
+                                    <div className="border-t border-stone-800 pt-3">
+                                        <button onClick={handleClear} className="w-full mb-2 bg-rose-900/20 hover:bg-rose-900/50 text-rose-400 rounded px-3 py-1.5 text-[10px] font-bold uppercase transition border border-rose-900/50">Clear Deck</button>
+                                        <button onClick={handleExport} className="w-full mb-2 bg-stone-800 hover:bg-stone-700 text-stone-300 rounded px-3 py-1.5 text-[10px] font-bold uppercase transition border border-stone-700">Export Deck to Clipboard</button>
+                                        <div className="flex gap-2">
+                                            <input type="text" value={importString} onChange={(e)=>setImportString(e.target.value)} placeholder="Paste deck code..." className="flex-1 bg-stone-950 border border-stone-800 rounded px-2 py-1.5 text-[10px] text-stone-200 outline-none focus:border-indigo-600" />
+                                            <button onClick={handleImport} className="bg-indigo-900/30 hover:bg-indigo-900/60 text-indigo-400 border border-indigo-900/50 rounded px-3 py-1.5 text-[10px] font-bold uppercase transition">Import</button>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                            
-                            <div className="border-t border-stone-800 pt-3">
+                            )}
+
+                            <div className="border-t border-stone-800 pt-3 mt-1">
                                 <button onClick={onTestDeck} className="w-full bg-emerald-900/40 hover:bg-emerald-900/70 text-emerald-400 border border-emerald-700/50 rounded py-3 text-xs font-black uppercase tracking-widest transition flex items-center justify-center gap-2">
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
                                     Test Deck in Sandbox
@@ -963,7 +1043,7 @@ const STARTER_DECKS = {
                                 {zoomedCard.image ? (
                                      <img src={zoomedCard.image} alt={zoomedCard.name} className="w-full h-full object-cover" />
                                 ) : (
-                                     <div className="flex flex-col items-center justify-center h-full bg-stone-800 text-stone-200 p-6 text-center border-4 border-stone-900">
+                                    <div className="flex flex-col items-center justify-center h-full bg-stone-800 text-stone-200 p-6 text-center border-4 border-stone-900">
                                          <h2 className="text-3xl font-bold mb-4 text-amber-500">{zoomedCard.name}</h2>
                                          <p className="text-stone-400 italic text-sm">{zoomedCard.description}</p>
                                      </div>
@@ -987,7 +1067,6 @@ const STARTER_DECKS = {
                 <div className="max-w-md mx-auto mt-20 bg-stone-900 border border-amber-900/30 rounded-2xl p-6 shadow-2xl text-center">
                     <h1 className="text-2xl font-black text-amber-500 uppercase tracking-widest mb-1">GoldBurn</h1>
                     <p className="text-xs text-stone-400 mb-6">This is a Test let me know of any errors.</p>
-                    
                     <div className="space-y-4 text-left">
                         <div>
                             <label className="text-[10px] font-bold text-stone-500 uppercase">Username</label>
@@ -1013,7 +1092,6 @@ const STARTER_DECKS = {
             const [conn, setConn] = useState(null);
             const [connected, setConnected] = useState(false);
             
-            // Custom Modals to bypass window popups
             const [confirmDialog, setConfirmDialog] = useState(null);
             const [alertDialog, setAlertDialog] = useState(null);
             
@@ -1022,14 +1100,15 @@ const STARTER_DECKS = {
             const [myVitalLocked, setMyVitalLocked] = useState(false);
             const [oppVitalLocked, setOppVitalLocked] = useState(false);
             const [vitalCardInst, setVitalCardInst] = useState(null);
-            const [gold, setGold] = useState(isHost ? 3 : 0);
             
+            const [gold, setGold] = useState(isHost ? 3 : 0);
             const [deck, setDeck] = useState([]);
             const [hand, setHand] = useState([]);
             const [grave, setGrave] = useState([]);
             const [voidZone, setVoidZone] = useState([]);
             const [myGrid, setMyGrid] = useState([ [null, null, null], [null, null, null] ]);
             const [actSlot, setActSlot] = useState(null);
+            
             const [oppGold, setOppGold] = useState(isHost ? 0 : 3);
             const [oppHandCount, setOppHandCount] = useState(5);
             const [oppDeckCount, setOppDeckCount] = useState(0);
@@ -1043,29 +1122,78 @@ const STARTER_DECKS = {
             const [selectedHandIdx, setSelectedHandIdx] = useState(null);
             const [inspectedCard, setInspectedCard] = useState(null);
             const [lockedInspectorId, setLockedInspectorId] = useState(null);
-            
-            // Fix: Inspector initializes closed on mobile, open on desktop
             const [isInspectorOpen, setIsInspectorOpen] = useState(() => typeof window !== 'undefined' && window.innerWidth >= 1024);
-            
             const [showMarkersUI, setShowMarkersUI] = useState(false);
             const [diceType, setDiceType] = useState('6');
             const [viewModal, setViewModal] = useState({ isOpen: false, title: '', cards: [], type: null, onSelect: null });
             const [activeMenu, setActiveMenu] = useState(null);
             const [zoomedCard, setZoomedCard] = useState(null);
             const [modalSelectedIdx, setModalSelectedIdx] = useState(null);
+            
             const [movingCard, setMovingCard] = useState(null);
+            
             const [popupMsg, setPopupMsg] = useState(null);
             const popupTimer = useRef(null);
-
             const [chatInput, setChatInput] = useState('');
             const [chatLogs, setChatLogs] = useState([]);
 
+            // Token Spawner State
+            const [tokenModal, setTokenModal] = useState(false);
+            const [tokenData, setTokenData] = useState({ name: '', hp: 1 });
+            const [placingToken, setPlacingToken] = useState(false);
+
+            // Ping System State
+            const [pingMode, setPingMode] = useState(false);
+            const [pingSource, setPingSource] = useState(null);
+            const [activePings, setActivePings] = useState([]);
+            const pingTimers = useRef({});
+
+            // Match Timer
+            const [matchTime, setMatchTime] = useState(0);
+
+            // Reconnect Recovery - Load Session
             useEffect(() => {
+                if (isSoloTest) return;
+                const savedStr = sessionStorage.getItem(`gb_session_${roomCode}`);
+                if (savedStr) {
+                    try {
+                        const s = JSON.parse(savedStr);
+                        setMyGrid(s.myGrid || [ [null, null, null], [null, null, null] ]);
+                        setHand(s.hand || []);
+                        setDeck(s.deck || []);
+                        setGrave(s.grave || []);
+                        setVoidZone(s.voidZone || []);
+                        setGold(s.gold !== undefined ? s.gold : (isHost ? 3 : 0));
+                        setActSlot(s.actSlot || null);
+                        setSetupPhase(s.setupPhase !== undefined ? s.setupPhase : true);
+                        setMyVitalPos(s.myVitalPos || null);
+                        setMyVitalLocked(s.myVitalLocked || false);
+                        if (s.vitalCardInst) setVitalCardInst(s.vitalCardInst);
+                        addLog("Local state recovered from session storage.", false);
+                    } catch (e) {
+                        console.error("Failed to parse session storage", e);
+                    }
+                }
+            }, [roomCode, isSoloTest]);
+
+            // Reconnect Recovery - Save Session
+            useEffect(() => {
+                if (isSoloTest) return;
+                sessionStorage.setItem(`gb_session_${roomCode}`, JSON.stringify({
+                    myGrid, hand, deck, grave, voidZone, gold, actSlot, setupPhase, myVitalPos, myVitalLocked, vitalCardInst
+                }));
+            }, [myGrid, hand, deck, grave, voidZone, gold, actSlot, setupPhase, myVitalPos, myVitalLocked, vitalCardInst, roomCode, isSoloTest]);
+
+            // Initial Deck Generation (only if no session saved or isSoloTest)
+            useEffect(() => {
+                const savedStr = sessionStorage.getItem(`gb_session_${roomCode}`);
+                if (!isSoloTest && savedStr) return; // Skip if loaded from session
+
                 let generatedDeck = [];
                 Object.entries(customDeck).forEach(([id, qty]) => {
                     const card = MASTER_CARDS.find(c => c.id === id);
                     if(card) {
-                        if (card.type === 'Vital') return; // Isolated configuration
+                        if (card.type === 'Vital') return;
                         for(let i=0; i<qty; i++) generatedDeck.push({ ...card, instanceId: Math.random().toString(36).substr(2,9), currentHp: card.hp });
                     }
                 });
@@ -1111,6 +1239,17 @@ const STARTER_DECKS = {
                 }
             }, [myVitalLocked, oppVitalLocked, isSoloTest]);
 
+            // Timer Tick
+            useEffect(() => {
+                let interval;
+                if (!setupPhase && connected && !isSoloTest) {
+                    interval = setInterval(() => setMatchTime(prev => prev + 1), 1000);
+                }
+                return () => clearInterval(interval);
+            }, [setupPhase, connected, isSoloTest]);
+
+            const formatTime = (secs) => `${String(Math.floor(secs / 60)).padStart(2, '0')}:${String(secs % 60).padStart(2, '0')}`;
+
             useEffect(() => {
                 if (conn && connected && !setupPhase && !isSoloTest) {
                     conn.send({ type: 'SYNC_COUNTS', hand: hand.length, deck: deck.length, grave: grave, voidZone: voidZone });
@@ -1134,10 +1273,13 @@ const STARTER_DECKS = {
                     if (data.type === 'LOG') setLogs(prev => [data.msg, ...prev]);
                     if (data.type === 'CHAT') setChatLogs(prev => [...prev, { sender: data.sender, msg: data.msg, isMe: false }]);
                     if (data.type === 'POPUP') showPopup(data.msg);
+                    if (data.type === 'PING') receivePing(data.source, data.target, data.color);
+                    
                     if (data.type === 'SYNC_GOLD') setOppGold(data.gold);
                     if (data.type === 'SYNC_GRID') setOppGrid(data.grid);
                     if (data.type === 'SYNC_ZONE') setSharedZone(data.zone);
                     if (data.type === 'SYNC_ACT') setOppActSlot(data.act);
+                    
                     if (data.type === 'SYNC_COUNTS') {
                         setOppHandCount(data.hand);
                         setOppDeckCount(data.deck);
@@ -1165,11 +1307,8 @@ const STARTER_DECKS = {
                         }
                     }
                     if (data.type === 'CONCEDE') {
-                        if (data.reason === 'VITAL_DEAD') {
-                            setAlertDialog({ msg: "🎉 You Win! The enemy's Vital fell to 0.", onClose: onLeaveLobby });
-                        } else {
-                            setAlertDialog({ msg: "🎉 You Win! Your opponent has conceded the match.", onClose: onLeaveLobby });
-                        }
+                        if (data.reason === 'VITAL_DEAD') setAlertDialog({ msg: "🎉 You Win! The enemy's Vital fell to 0.", onClose: onLeaveLobby });
+                        else setAlertDialog({ msg: "🎉 You Win! Your opponent has conceded the match.", onClose: onLeaveLobby });
                     }
                 });
             };
@@ -1188,19 +1327,35 @@ const STARTER_DECKS = {
                 setChatInput('');
             };
 
+            // Network Broadcasters
             const broadcastGrid = (newGrid) => { setMyGrid(newGrid); if(conn && !isSoloTest) conn.send({ type: 'SYNC_GRID', grid: newGrid }); };
             const broadcastZone = (card) => { setSharedZone(card); if(conn && !isSoloTest) conn.send({ type: 'SYNC_ZONE', zone: card }); };
             const broadcastAct = (card) => { setActSlot(card); if(conn && !isSoloTest) conn.send({ type: 'SYNC_ACT', act: card }); };
+            
+            // Ping logic
+            const receivePing = (source, target, color) => {
+                const pingId = Math.random().toString(36).substr(2,9);
+                setActivePings(prev => [...prev, { id: pingId, source, target, color }]);
+                pingTimers.current[pingId] = setTimeout(() => {
+                    setActivePings(prev => prev.filter(p => p.id !== pingId));
+                    delete pingTimers.current[pingId];
+                }, 2000);
+            };
+
+            const sendPing = (source, target) => {
+                if (source === target) return;
+                const color = isHost ? '#3b82f6' : '#ef4444'; // Host blue, client red
+                receivePing(source, target, color);
+                if (conn && !isSoloTest) conn.send({ type: 'PING', source, target, color });
+            };
 
             const handleConcede = () => {
-                if (isSoloTest) {
-                    onLeaveLobby();
-                    return;
-                }
+                if (isSoloTest) { onLeaveLobby(); return; }
                 setConfirmDialog({
                     msg: "Are you sure you want to concede? You will lose the match.",
                     onConfirm: () => {
                         if(conn) conn.send({ type: 'CONCEDE' });
+                        sessionStorage.removeItem(`gb_session_${roomCode}`);
                         setConfirmDialog(null);
                         setAlertDialog({ msg: "You have conceded the match.", onClose: onLeaveLobby });
                     }
@@ -1213,7 +1368,6 @@ const STARTER_DECKS = {
                     return;
                 }
                 setMyVitalLocked(true);
-                
                 let newMyGrid = [...myGrid];
                 newMyGrid[myVitalPos.r] = [...newMyGrid[myVitalPos.r]];
                 newMyGrid[myVitalPos.r][myVitalPos.c] = vitalCardInst;
@@ -1262,13 +1416,7 @@ const STARTER_DECKS = {
 
             const openViewer = (title, cards, type, selectable = false) => {
                 setModalSelectedIdx(null);
-                setViewModal({
-                    isOpen: true,
-                    title: title,
-                    cards: cards,
-                    type: type,
-                    onSelect: selectable ? searchDeckDraw : null
-                });
+                setViewModal({ isOpen: true, title: title, cards: cards, type: type, onSelect: selectable ? searchDeckDraw : null });
             };
 
             const moveFromPile = (source, idx, dest) => {
@@ -1351,17 +1499,43 @@ const STARTER_DECKS = {
                 addLog(`${username} moved ${cardToMove.name} to a new position.`, true);
             };
 
+            const handleSpawnToken = () => {
+                if (!tokenData.name) return;
+                setTokenModal(false);
+                setPlacingToken(tokenData);
+            };
+
             const placeToGrid = (r, c) => {
                 if (myGrid[r][c] !== null) { 
                     addLog(`Cannot place a card on an occupied space!`, false);
                     return; 
                 }
+
+                if (placingToken) {
+                    const tokenCard = {
+                        id: 'custom_token',
+                        name: placingToken.name || 'Token',
+                        type: 'Troop',
+                        currentHp: parseInt(placingToken.hp) || 1,
+                        image: 'XXXXtoken.png',
+                        instanceId: 'tok_' + Math.random().toString(36).substr(2, 9)
+                    };
+                    let newGrid = [...myGrid];
+                    newGrid[r] = [...newGrid[r]];
+                    newGrid[r][c] = tokenCard;
+                    broadcastGrid(newGrid);
+                    setPlacingToken(false);
+                    addLog(`${username} spawned a token: ${tokenCard.name}.`, true);
+                    return;
+                }
+
                 if (selectedHandIdx === null) return;
                 const card = hand[selectedHandIdx];
                 if (card.type.includes('Act') || card.type === 'Zone') {
                     setAlertDialog({ msg: "Acts and Zones have specific slots in the middle!" });
                     return;
                 }
+                
                 let newGrid = [...myGrid];
                 newGrid[r] = [...newGrid[r]];
                 newGrid[r][c] = card;
@@ -1377,10 +1551,7 @@ const STARTER_DECKS = {
             };
 
             const placeToZone = () => {
-                if (sharedZone !== null) { 
-                    addLog(`Zone slot is already occupied!`, false);
-                    return; 
-                }
+                if (sharedZone !== null) { addLog(`Zone slot is already occupied!`, false); return; }
                 if (selectedHandIdx === null) return;
                 const card = hand[selectedHandIdx];
                 if (card.type !== 'Zone') return;
@@ -1396,10 +1567,7 @@ const STARTER_DECKS = {
             };
 
             const placeToAct = () => {
-                if (actSlot !== null) { 
-                    addLog(`Act slot is already occupied!`, false);
-                    return; 
-                }
+                if (actSlot !== null) { addLog(`Act slot is already occupied!`, false); return; }
                 if (selectedHandIdx === null) return;
                 const card = hand[selectedHandIdx];
                 if (!card.type.includes('Act')) return;
@@ -1422,6 +1590,7 @@ const STARTER_DECKS = {
                 if (targetCard && targetCard.type === 'Vital' && targetCard.currentHp + amt <= 0) {
                     setTimeout(() => {
                         if(conn && !isSoloTest) conn.send({ type: 'CONCEDE', reason: 'VITAL_DEAD' });
+                        sessionStorage.removeItem(`gb_session_${roomCode}`);
                         setAlertDialog({ msg: "Your Vital has fallen to 0. YOU LOST!", onClose: onLeaveLobby });
                     }, 500);
                 }
@@ -1442,11 +1611,7 @@ const STARTER_DECKS = {
                 if(!inspectedCard) return;
                 updateMyCard(inspectedCard.instanceId, card => {
                     const currentCount = card.markers?.[colorHex] || 0;
-                    return {
-                        ...card, 
-                        markers: { 
-                            ...(card.markers || {}), [colorHex]: Math.max(0, currentCount + delta) }
-                    };
+                    return { ...card, markers: { ...(card.markers || {}), [colorHex]: Math.max(0, currentCount + delta) } };
                 });
             };
 
@@ -1468,20 +1633,14 @@ const STARTER_DECKS = {
                 
                 card = { ...card, markers: {}, actionUsed: false };
                 const isOpponentOwned = type === 'zone' && card.ownerHost !== isHost;
+                
                 if (isOpponentOwned) {
                     if (conn && !isSoloTest) conn.send({ type: 'OPP_ZONE_AWAY', dest, card });
                     addLog(`${username} sent ${card.name} to the opponent's ${dest}.`, true);
                 } else {
-                    if (dest === 'grave') {
-                        setGrave([card, ...grave]);
-                        addLog(`${username} sent ${card.name} to the Graveyard.`, true);
-                    } else if (dest === 'void') {
-                        setVoidZone([card, ...voidZone]);
-                        addLog(`${username} exiled ${card.name} to the Void.`, true);
-                    } else if (dest === 'deck') {
-                        setDeck(prev => [...prev, card].sort(() => Math.random() - 0.5));
-                        addLog(`${username} shuffled ${card.name} into their Deck.`, true);
-                    }
+                    if (dest === 'grave') { setGrave([card, ...grave]); addLog(`${username} sent ${card.name} to the Graveyard.`, true); }
+                    else if (dest === 'void') { setVoidZone([card, ...voidZone]); addLog(`${username} exiled ${card.name} to the Void.`, true); }
+                    else if (dest === 'deck') { setDeck(prev => [...prev, card].sort(() => Math.random() - 0.5)); addLog(`${username} shuffled ${card.name} into their Deck.`, true); }
                 }
                 setActiveMenu(null);
                 setLockedInspectorId(null);
@@ -1495,16 +1654,9 @@ const STARTER_DECKS = {
                 setSelectedHandIdx(null);
                 setLockedInspectorId(null);
 
-                if (dest === 'grave') {
-                    setGrave([card, ...grave]);
-                    addLog(`${username} discarded ${card.name} to the Graveyard.`, true);
-                } else if (dest === 'void') {
-                    setVoidZone([card, ...voidZone]);
-                    addLog(`${username} exiled ${card.name} from hand to the Void.`, true);
-                } else if (dest === 'deck') {
-                    setDeck(prev => [...prev, card].sort(() => Math.random() - 0.5));
-                    addLog(`${username} shuffled ${card.name} from their hand into the Deck.`, true);
-                }
+                if (dest === 'grave') { setGrave([card, ...grave]); addLog(`${username} discarded ${card.name} to the Graveyard.`, true); }
+                else if (dest === 'void') { setVoidZone([card, ...voidZone]); addLog(`${username} exiled ${card.name} from hand to the Void.`, true); }
+                else if (dest === 'deck') { setDeck(prev => [...prev, card].sort(() => Math.random() - 0.5)); addLog(`${username} shuffled ${card.name} from their hand into the Deck.`, true); }
             };
 
             const isMyCard = useMemo(() => {
@@ -1518,6 +1670,8 @@ const STARTER_DECKS = {
                 setMovingCard(null);
                 setLockedInspectorId(null);
                 setSelectedHandIdx(null);
+                setPingMode(false);
+                if (placingToken) setPlacingToken(false);
             };
 
             const renderCardLayout = (card, showMenuParams) => {
@@ -1573,32 +1727,64 @@ const STARTER_DECKS = {
                 );
             }
 
-            const renderCard = (card, onClick, showMenuParams) => {
+            const renderCard = (card, onClick, showMenuParams, cellId) => {
                 const isMoveTarget = movingCard && showMenuParams?.type === 'grid';
+                const isPlacingTarget = placingToken && showMenuParams?.type === 'grid';
+                
+                // Ping interaction handlers
+                const handlePointerDown = (e) => {
+                    if (e.shiftKey && cellId) { e.preventDefault(); e.stopPropagation(); setPingSource(cellId); }
+                };
+                const handlePointerUp = (e) => {
+                    if (pingSource && pingSource !== cellId) {
+                        e.stopPropagation(); sendPing(pingSource, cellId); setPingSource(null);
+                    }
+                };
+                
                 if (!card) return (
                     <div 
+                        id={cellId}
+                        onMouseDown={handlePointerDown}
+                        onMouseUp={handlePointerUp}
                         onClick={(e) => { 
                             e.stopPropagation();
+                            if (pingMode && cellId) {
+                                if (!pingSource) { setPingSource(cellId); return; }
+                                else { sendPing(pingSource, cellId); setPingSource(null); setPingMode(false); return; }
+                            }
                             if (isMoveTarget) {
                                 executeMove(showMenuParams.r, showMenuParams.c);
+                            } else if (isPlacingTarget) {
+                                placeToGrid(showMenuParams.r, showMenuParams.c);
                             } else {
                                 setLockedInspectorId(null);
                                 if(!showMenuParams || showMenuParams.type==='grid') setInspectedCard(null); 
                                 if(onClick) onClick(e); 
                             }
                         }} 
-                        onMouseEnter={() => { if(!isMoveTarget && !lockedInspectorId) setInspectedCard(null); }}
-                        className={`w-full h-full border-2 border-dashed rounded-lg flex items-center justify-center transition-all hover:scale-105 ${isMoveTarget ? 'border-emerald-500 bg-emerald-900/30 cursor-pointer animate-pulse' : 'border-stone-800 bg-stone-900/40 hover:bg-stone-800 cursor-pointer'}`}
+                        onMouseEnter={() => { if(!isMoveTarget && !isPlacingTarget && !lockedInspectorId) setInspectedCard(null); }}
+                        className={`w-full h-full border-2 border-dashed rounded-lg flex items-center justify-center transition-all hover:scale-105 ${
+                            isMoveTarget ? 'border-emerald-500 bg-emerald-900/30 cursor-pointer animate-pulse' : 
+                            isPlacingTarget ? 'border-indigo-500 bg-indigo-900/30 cursor-pointer animate-pulse' :
+                            'border-stone-800 bg-stone-900/40 hover:bg-stone-800 cursor-pointer'
+                        }`}
                     >
                         <span className="text-[10px] font-mono text-stone-600 uppercase text-center px-2">
-                            {isMoveTarget ? 'Move Here' : 'Empty Space'}
+                            {isMoveTarget ? 'Move Here' : isPlacingTarget ? 'Spawn Here' : 'Empty Space'}
                         </span>
                     </div>
                 );
                 return (
                     <div 
+                        id={cellId}
+                        onMouseDown={handlePointerDown}
+                        onMouseUp={handlePointerUp}
                         onClick={(e) => { 
                             e.stopPropagation();
+                            if (pingMode && cellId) {
+                                if (!pingSource) { setPingSource(cellId); return; }
+                                else { sendPing(pingSource, cellId); setPingSource(null); setPingMode(false); return; }
+                            }
                             if (lockedInspectorId === card.instanceId && (!showMenuParams || activeMenu?.id === showMenuParams.id)) {
                                 setLockedInspectorId(null);
                                 if (showMenuParams) setActiveMenu(null);
@@ -1607,10 +1793,7 @@ const STARTER_DECKS = {
                                 setLockedInspectorId(card.instanceId);
                                 if (onClick) onClick(e);
                                 if (showMenuParams) setActiveMenu(showMenuParams);
-                                // FIX: Only auto-open the inspector on Desktop
-                                if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
-                                    setIsInspectorOpen(true);
-                                }
+                                if (typeof window !== 'undefined' && window.innerWidth >= 1024) setIsInspectorOpen(true);
                             }
                         }} 
                         onMouseEnter={() => { if(card && !lockedInspectorId) setInspectedCard(card); }}
@@ -1621,7 +1804,6 @@ const STARTER_DECKS = {
                 );
             };
 
-            // Extracted UI chunks for the mobile-split layout
             const renderStatsBlock = () => (
                 <div className="bg-stone-900 border border-stone-800 rounded-xl p-4 shadow-md w-full">
                     <div className="flex justify-between items-center mb-1">
@@ -1632,9 +1814,12 @@ const STARTER_DECKS = {
                     </div>
                     
                     {!isSoloTest && (
-                        <div className="flex items-center gap-2 text-[10px] font-mono mb-4">
-                            <div className={`w-2 h-2 rounded-full ${connected ? 'bg-emerald-500' : 'bg-rose-500 animate-pulse'}`}></div>
-                            <span className={connected ? 'text-emerald-400' : 'text-rose-400'}>{connected ? 'P2P Linked' : 'Connection Lost'}</span>
+                        <div className="flex items-center justify-between text-[10px] font-mono mb-4">
+                            <div className="flex items-center gap-2">
+                                <div className={`w-2 h-2 rounded-full ${connected ? 'bg-emerald-500' : 'bg-rose-500 animate-pulse'}`}></div>
+                                <span className={connected ? 'text-emerald-400' : 'text-rose-400'}>{connected ? 'P2P Linked' : 'Connection Lost'}</span>
+                            </div>
+                            <span className="text-stone-400">{formatTime(matchTime)}</span>
                         </div>
                     )}
 
@@ -1677,15 +1862,9 @@ const STARTER_DECKS = {
                 </div>
             );
 
+            // Reordered Match Chat to sit ABOVE Actions Log
             const renderLogsChatBlock = () => (
                 <div className="flex flex-col gap-4 flex-1 min-h-[300px]">
-                    <div className="flex-1 bg-stone-900 border border-stone-800 rounded-xl p-3 flex flex-col min-h-[120px]">
-                        <span className="text-[10px] font-bold text-stone-500 uppercase tracking-widest border-b border-stone-800 pb-1 mb-2">Actions Log</span>
-                        <div className="flex-1 overflow-y-auto space-y-1 font-mono text-[9px] text-stone-400 pr-1">
-                            {logs.map((l, i) => <div key={i} className="border-b border-stone-950 pb-0.5">{l}</div>)}
-                        </div>
-                    </div>
-                    
                     {!isSoloTest && (
                         <div className="flex-1 bg-stone-900 border border-stone-800 rounded-xl p-3 flex flex-col min-h-[150px]">
                             <span className="text-[10px] font-bold text-stone-500 uppercase tracking-widest border-b border-stone-800 pb-1 mb-2">Match Chat</span>
@@ -1703,8 +1882,43 @@ const STARTER_DECKS = {
                             </form>
                         </div>
                     )}
+                    
+                    <div className="flex-1 bg-stone-900 border border-stone-800 rounded-xl p-3 flex flex-col min-h-[120px]">
+                        <span className="text-[10px] font-bold text-stone-500 uppercase tracking-widest border-b border-stone-800 pb-1 mb-2">Actions Log</span>
+                        <div className="flex-1 overflow-y-auto space-y-1 font-mono text-[9px] text-stone-400 pr-1">
+                            {logs.map((l, i) => <div key={i} className="border-b border-stone-950 pb-0.5">{l}</div>)}
+                        </div>
+                    </div>
                 </div>
             );
+
+            // Calculate SVG paths for active pings
+            const renderPingOverlay = () => {
+                return (
+                    <svg className="absolute inset-0 w-full h-full pointer-events-none z-[100]" style={{ overflow: 'visible' }}>
+                        {activePings.map(ping => {
+                            const src = document.getElementById(ping.source);
+                            const tgt = document.getElementById(ping.target);
+                            if(!src || !tgt) return null;
+                            const srcRect = src.getBoundingClientRect();
+                            const tgtRect = tgt.getBoundingClientRect();
+                            // Approximate coordinates relative to document flow
+                            return (
+                                <g key={ping.id}>
+                                    <line 
+                                        x1={srcRect.left + srcRect.width/2} 
+                                        y1={srcRect.top + srcRect.height/2} 
+                                        x2={tgtRect.left + tgtRect.width/2} 
+                                        y2={tgtRect.top + tgtRect.height/2} 
+                                        stroke={ping.color} strokeWidth="4" strokeLinecap="round" className="ping-line" opacity="0.8"
+                                    />
+                                    <circle cx={tgtRect.left + tgtRect.width/2} cy={tgtRect.top + tgtRect.height/2} r="6" fill={ping.color} opacity="0.8" />
+                                </g>
+                            );
+                        })}
+                    </svg>
+                );
+            };
 
             // ============================================================================
             // PHASE 1: SETUP SCREEN
@@ -1712,8 +1926,6 @@ const STARTER_DECKS = {
             if (setupPhase) {
                 return (
                     <div className="h-screen flex flex-col items-center justify-center p-4 relative">
-                        
-                        {/* CUSTOM CONFIRM OVERLAY */}
                         {confirmDialog && (
                             <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
                                 <div className="bg-stone-900 border border-amber-500 rounded-xl p-6 max-w-sm w-full text-center shadow-2xl">
@@ -1795,8 +2007,8 @@ const STARTER_DECKS = {
             // ============================================================================
             return (
                 <div className="h-screen flex flex-col lg:flex-row p-2 md:p-4 gap-2 md:gap-4 max-w-[1700px] mx-auto overflow-y-auto lg:overflow-hidden relative" onClick={clearInteractions}>
+                    {renderPingOverlay()}
                     
-                    {/* IN-GAME ALERTS & CONFIRMS */}
                     {popupMsg && (
                         <div className="fixed top-[40%] left-1/2 -translate-x-1/2 z-[100] bg-stone-950/95 border border-amber-500/50 text-amber-400 font-bold px-8 py-6 rounded-2xl shadow-[0_0_40px_rgba(245,158,11,0.3)] text-xl text-center pointer-events-none animate-pulse max-w-sm backdrop-blur-sm">
                             {popupMsg}
@@ -1828,19 +2040,19 @@ const STARTER_DECKS = {
                     )}
 
                     {/* MOBILE STATS BOX (Hidden on Desktop) */}
-                    <div className="block lg:hidden w-full shrink-0">
+                    <div className="block lg:hidden w-full shrink-0 relative z-10">
                         {renderStatsBlock()}
                     </div>
 
                     {/* DESKTOP LEFT COLUMN (Hidden on Mobile) */}
-                    <div className="hidden lg:flex w-64 flex-col gap-4 shrink-0 overflow-y-auto">
+                    <div className="hidden lg:flex w-64 flex-col gap-4 shrink-0 overflow-y-auto relative z-10">
                         {renderStatsBlock()}
                         {renderLogsChatBlock()}
                     </div>
 
                     {/* CENTER PANEL: The Battlefield & Hand */}
-                    <div className="flex-1 flex flex-col gap-4 min-w-0 pb-10 lg:pb-0">
-                        <div className="flex-1 bg-stone-900 border border-stone-800 rounded-xl p-2 sm:p-4 flex flex-col justify-center relative shadow-inner overflow-x-auto min-h-[500px]">
+                    <div className="flex-1 flex flex-col gap-4 min-w-0 pb-10 lg:pb-0 relative">
+                        <div className="flex-1 bg-stone-900 border border-stone-800 rounded-xl p-2 sm:p-4 flex flex-col justify-center shadow-inner overflow-x-auto min-h-[500px]">
                             
                             {!isSoloTest && (
                                 <div className="w-full max-w-xl mx-auto mb-auto">
@@ -1851,10 +2063,10 @@ const STARTER_DECKS = {
                                                 {[0,1,2].map(c => (
                                                     <div key={`opp-${r}-${c}`} className="w-[15vw] sm:w-[80px] h-[21vw] sm:h-[112px] opacity-70 cursor-pointer">
                                                         {renderCard(oppGrid[r][c], () => { 
-                                                            setInspectedCard(oppGrid[r][c]); 
+                                                            setInspectedCard(oppGrid[r][c]);
                                                             setLockedInspectorId(oppGrid[r][c]?.instanceId); 
-                                                            if (typeof window !== 'undefined' && window.innerWidth >= 1024) setIsInspectorOpen(true); 
-                                                        })}
+                                                            if (typeof window !== 'undefined' && window.innerWidth >= 1024) setIsInspectorOpen(true);
+                                                        }, null, `cell-opp-${r}-${c}`)}
                                                     </div>
                                                 ))}
                                             </div>
@@ -1865,7 +2077,7 @@ const STARTER_DECKS = {
 
                             <div className={`w-full max-w-3xl mx-auto flex items-center border-y border-stone-800/60 py-3 my-4 bg-stone-950/30 rounded-xl px-2 md:px-4 min-w-0 md:min-w-[500px] flex-wrap md:flex-nowrap justify-center md:justify-between gap-4 md:gap-0 ${isSoloTest ? 'mt-auto' : ''}`}>
                                 {!isSoloTest ? (
-                                    <div onClick={(e) => { 
+                                    <div id="cell-opp-act" onClick={(e) => { 
                                             e.stopPropagation(); 
                                             if(oppActSlot) { 
                                                 setInspectedCard(oppActSlot); 
@@ -1883,14 +2095,14 @@ const STARTER_DECKS = {
                                 <div className="flex flex-col items-center">
                                     <span className="text-[10px] font-mono text-amber-500 uppercase tracking-widest mb-1 text-center">Zone in Play</span>
                                     <div className="w-[15vw] sm:w-[80px] h-[21vw] sm:h-[112px] flex-shrink-0 relative">
-                                        {renderCard(sharedZone, placeToZone, { type: 'zone', id: 'shared-zone' })}
+                                        {renderCard(sharedZone, placeToZone, { type: 'zone', id: 'shared-zone' }, 'cell-shared-zone')}
                                     </div>
                                     <span className="text-[8px] text-stone-600 mt-1 italic hidden sm:block">Affects both fields</span>
                                 </div>
 
                                 <div className="w-[15vw] sm:w-[80px] h-[21vw] sm:h-[112px] flex-shrink-0 relative">
                                     <span className="absolute -top-3 text-[8px] text-amber-500 uppercase font-mono hidden sm:block">Your Act Slot</span>
-                                    {renderCard(actSlot, placeToAct, { type: 'act', id: 'my-act' })}
+                                    {renderCard(actSlot, placeToAct, { type: 'act', id: 'my-act' }, 'cell-my-act')}
                                 </div>
                             </div>
 
@@ -1901,7 +2113,7 @@ const STARTER_DECKS = {
                                         <div key={`my-row-${r}`} className="flex justify-center gap-2">
                                             {[0,1,2].map(c => (
                                                 <div key={`my-${r}-${c}`} className="w-[15vw] sm:w-[80px] h-[21vw] sm:h-[112px]">
-                                                    {renderCard(myGrid[r][c], () => placeToGrid(r, c), { type: 'grid', r, c, id: `my-${r}-${c}` })}
+                                                    {renderCard(myGrid[r][c], () => placeToGrid(r, c), { type: 'grid', r, c, id: `my-${r}-${c}` }, `cell-my-${r}-${c}`)}
                                                 </div>
                                             ))}
                                         </div>
@@ -1912,7 +2124,7 @@ const STARTER_DECKS = {
                         </div>
 
                         {/* Hand & Piles */}
-                        <div className="bg-stone-900 border border-stone-800 rounded-xl p-2 sm:p-4 flex gap-2 sm:gap-4 shrink-0 overflow-hidden">
+                        <div className="bg-stone-900 border border-stone-800 rounded-xl p-2 sm:p-4 flex gap-2 sm:gap-4 shrink-0 overflow-hidden relative z-10">
                             <div className="flex flex-col gap-2 w-16 sm:w-28 border-r border-stone-800 pr-2 sm:pr-4 shrink-0">
                                 <button onClick={(e)=>{e.stopPropagation(); drawFromDeck();}} className="flex-1 bg-stone-950 border border-stone-800 hover:border-amber-600 rounded text-xs font-bold text-stone-300 transition flex flex-col items-center justify-center">
                                     <span className="hidden sm:inline">Draw</span>
@@ -1946,7 +2158,6 @@ const STARTER_DECKS = {
                                                      setSelectedHandIdx(idx);
                                                      setInspectedCard(card);
                                                      setLockedInspectorId(card.instanceId);
-                                                     // FIX: Only auto-open the inspector on Desktop
                                                      if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
                                                          setIsInspectorOpen(true);
                                                      }
@@ -1980,7 +2191,7 @@ const STARTER_DECKS = {
                         </div>
 
                         {/* MOBILE LOGS AND CHAT (Hidden on Desktop) */}
-                        <div className="flex lg:hidden w-full flex-col mt-2 shrink-0">
+                        <div className="flex lg:hidden w-full flex-col mt-2 shrink-0 relative z-10">
                             {renderLogsChatBlock()}
                         </div>
                     </div>
@@ -2050,6 +2261,15 @@ const STARTER_DECKS = {
                                 </div>
                             )}
 
+                            {/* Token Placing Warning */}
+                            {placingToken && (
+                                <div className="bg-indigo-900/40 border border-indigo-500/50 rounded-xl p-3 flex flex-col items-center text-center gap-2 shadow-lg shadow-indigo-900/20 animate-pulse shrink-0">
+                                    <span className="text-xs text-indigo-400 font-bold uppercase tracking-widest">Spawn Mode Active</span>
+                                    <span className="text-[10px] text-stone-300">Select an empty space to drop '{placingToken.name}'.</span>
+                                    <button onClick={() => setPlacingToken(false)} className="bg-stone-900 hover:bg-stone-800 text-stone-300 border border-stone-700 rounded px-4 py-1.5 text-[10px] uppercase font-bold transition">Cancel Spawn</button>
+                                </div>
+                            )}
+
                             {/* Status Effect Markers UI Dropdown */}
                             {isMyCard && (
                                 <div className="bg-stone-950 border border-stone-800 rounded-xl shrink-0 transition-all overflow-hidden">
@@ -2100,8 +2320,19 @@ const STARTER_DECKS = {
                                 </div>
                             </div>
 
-                            {/* Actions Refresh Panel */}
+                            {/* Mobile Ping Tool */}
+                            <div className="bg-stone-950 border border-stone-800 rounded-xl p-4 flex flex-col items-center shrink-0 lg:hidden">
+                                <span className="text-[10px] font-bold text-stone-500 uppercase tracking-widest block mb-2">Targeting System</span>
+                                <button onClick={() => { setPingMode(!pingMode); setPingSource(null); }} className={`w-full border rounded py-2 text-xs font-bold uppercase transition ${pingMode ? 'bg-amber-900/60 text-amber-100 border-amber-500 animate-pulse' : 'bg-stone-900 text-stone-400 border-stone-700 hover:bg-stone-800'}`}>
+                                    {pingMode ? 'Select Targets' : 'Ping Mode (Arrow)'}
+                                </button>
+                                <span className="text-[8px] text-stone-600 mt-1 italic text-center">Desktop: Shift + Drag between cards</span>
+                            </div>
+
                             <div className="bg-stone-950 border border-stone-800 rounded-xl p-4 flex flex-col items-center shrink-0 mt-auto">
+                                <button onClick={() => setTokenModal(true)} className="w-full bg-indigo-900/30 hover:bg-indigo-900/60 text-indigo-400 border border-indigo-900/50 rounded py-2 mb-2 text-xs font-bold uppercase transition flex items-center justify-center gap-2">
+                                    Spawn Token
+                                </button>
                                 <button onClick={clearAllActions} className="w-full bg-amber-900/30 hover:bg-amber-900/60 text-amber-500 border border-amber-900/50 rounded py-2 text-xs font-bold uppercase transition flex items-center justify-center gap-2">
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
                                     Refresh All Actions
@@ -2161,19 +2392,42 @@ const STARTER_DECKS = {
                         </div>
                     )}
 
-                    {/* ZOOM MODAL (Matches the Deck Builder) */}
+                    {/* ZOOM MODAL */}
                     {zoomedCard && (
                         <div className="fixed inset-0 bg-black/90 z-[110] flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setZoomedCard(null)}>
                             <div className="w-[80vw] h-[112vw] sm:w-[400px] sm:h-[560px] max-w-[400px] max-h-[560px] relative rounded-2xl overflow-hidden shadow-2xl border-2 border-amber-700" onClick={e => e.stopPropagation()}>
                                 {zoomedCard.image ? (
                                      <img src={zoomedCard.image} alt={zoomedCard.name} className="w-full h-full object-cover" />
                                 ) : (
-                                     <div className="flex flex-col items-center justify-center h-full bg-stone-800 text-stone-200 p-6 text-center border-4 border-stone-900">
+                                    <div className="flex flex-col items-center justify-center h-full bg-stone-800 text-stone-200 p-6 text-center border-4 border-stone-900">
                                          <h2 className="text-3xl font-bold mb-4 text-amber-500">{zoomedCard.name}</h2>
                                          <p className="text-stone-400 italic text-sm">{zoomedCard.description}</p>
                                      </div>
                                 )}
                                 <button onClick={() => setZoomedCard(null)} className="absolute top-3 right-3 bg-stone-900/80 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-rose-600 border border-stone-700 transition">X</button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* TOKEN SPAWN MODAL */}
+                    {tokenModal && (
+                        <div className="fixed inset-0 bg-black/80 z-[110] flex items-center justify-center p-4 backdrop-blur-sm">
+                            <div className="bg-stone-900 border border-indigo-500 rounded-xl p-6 max-w-sm w-full shadow-2xl">
+                                <h3 className="text-indigo-400 font-bold mb-4 uppercase tracking-widest text-center">Custom Token Spawner</h3>
+                                <div className="space-y-4 mb-6">
+                                    <div>
+                                        <label className="text-[10px] text-stone-500 uppercase font-bold">Token Name</label>
+                                        <input type="text" value={tokenData.name} onChange={e=>setTokenData({...tokenData, name: e.target.value})} className="w-full bg-stone-950 border border-stone-800 rounded px-3 py-2 text-stone-200 outline-none focus:border-indigo-600 mt-1" placeholder="e.g., Skeleton" />
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] text-stone-500 uppercase font-bold">HP (Optional)</label>
+                                        <input type="number" value={tokenData.hp} onChange={e=>setTokenData({...tokenData, hp: e.target.value})} className="w-full bg-stone-950 border border-stone-800 rounded px-3 py-2 text-stone-200 outline-none focus:border-indigo-600 mt-1" />
+                                    </div>
+                                </div>
+                                <div className="flex gap-4 justify-center">
+                                    <button onClick={() => setTokenModal(false)} className="flex-1 bg-stone-800 hover:bg-stone-700 py-2 rounded text-stone-300 transition uppercase font-bold text-xs">Cancel</button>
+                                    <button onClick={handleSpawnToken} className="flex-1 bg-indigo-700 hover:bg-indigo-600 py-2 rounded text-white font-bold transition uppercase text-xs">Drop on Grid</button>
+                                </div>
                             </div>
                         </div>
                     )}
