@@ -564,6 +564,7 @@ const STARTER_DECKS = {
         'SDDP_tradinghall': 1
     }
 };
+
         const MARKER_COLORS = [
             { bg: '#ef4444', name: 'Red' }, { bg: '#22c55e', name: 'Green' }, { bg: '#3b82f6', name: 'Blue' }, { bg: '#a855f7', name: 'Purple' }, { bg: '#eab308', name: 'Yellow' }
         ];
@@ -626,9 +627,17 @@ const STARTER_DECKS = {
                 setSavedDecks(newDecks);
                 localStorage.setItem('v1_saved_decks_list', JSON.stringify(newDecks));
             };
+            
+            const deleteCustomDeck = (name) => {
+                if(!name || !savedDecks[name]) return;
+                const newDecks = { ...savedDecks };
+                delete newDecks[name];
+                setSavedDecks(newDecks);
+                localStorage.setItem('v1_saved_decks_list', JSON.stringify(newDecks));
+            };
 
             return (
-                <GameContext.Provider value={{ customDeck, updateDeckQty, loadEntireDeck, clearDeck, savedDecks, saveCustomDeck }}>
+                <GameContext.Provider value={{ customDeck, updateDeckQty, loadEntireDeck, clearDeck, savedDecks, saveCustomDeck, deleteCustomDeck }}>
                     {children}
                 </GameContext.Provider>
             );
@@ -638,7 +647,7 @@ const STARTER_DECKS = {
         // DECK BUILDER (FORGE)
         // ============================================================================
         const DeckBuilder = ({ onTestDeck }) => {
-            const { customDeck, updateDeckQty, loadEntireDeck, clearDeck, savedDecks, saveCustomDeck } = useContext(GameContext);
+            const { customDeck, updateDeckQty, loadEntireDeck, clearDeck, savedDecks, saveCustomDeck, deleteCustomDeck } = useContext(GameContext);
             const [search, setSearch] = useState('');
             const [searchKeyword, setSearchKeyword] = useState('');
             const [costFilter, setCostFilter] = useState('All');
@@ -775,6 +784,18 @@ const STARTER_DECKS = {
                         onConfirm: () => { loadEntireDeck(deckObj); setConfirmDialog(null); }
                     });
                 }
+            };
+            
+            const handleDeleteCustom = () => {
+                if (!selectedCustom) return;
+                setConfirmDialog({
+                    msg: `Are you sure you want to delete the saved deck: "${selectedCustom}"?`,
+                    onConfirm: () => { 
+                        deleteCustomDeck(selectedCustom); 
+                        setSelectedCustom(''); 
+                        setConfirmDialog(null); 
+                    }
+                });
             };
 
             const handleClear = () => {
@@ -1009,6 +1030,7 @@ const STARTER_DECKS = {
                                             {Object.keys(savedDecks).map(name => <option key={name} value={name}>{name}</option>)}
                                         </select>
                                         <button onClick={handleLoadCustom} disabled={!selectedCustom} className={`px-3 py-1.5 rounded text-[10px] font-bold uppercase transition border ${!selectedCustom ? 'bg-stone-800 text-stone-600 border-stone-700' : 'bg-emerald-900/30 hover:bg-emerald-900/60 text-emerald-500 border-emerald-900/50'}`}>Load</button>
+                                        <button onClick={handleDeleteCustom} disabled={!selectedCustom} className={`px-3 py-1.5 rounded text-[10px] font-bold uppercase transition border ${!selectedCustom ? 'bg-stone-800 text-stone-600 border-stone-700' : 'bg-rose-900/30 hover:bg-rose-900/60 text-rose-500 border-rose-900/50'}`}>Del</button>
                                     </div>
 
                                     <div className="flex gap-2 mb-3">
